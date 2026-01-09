@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+  <div>
+    <h1>Admin</h1>
+    <p class="lead">System identity and build metadata for the command center.</p>
+  </div>
+</section>
+
+<section class="grid">
+  <div class="metric-card">
+    <div class="metric-card__label">Git Branch</div>
+    <div class="metric-card__value">{{ branch }}</div>
+    <div class="metric-card__sub">From repository metadata</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-card__label">Commit Date</div>
+    <div class="metric-card__value">{{ commit_date }}</div>
+    <div class="metric-card__sub">Last recorded commit</div>
+  </div>
+</section>
+{% endblock %}

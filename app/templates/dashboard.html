@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+  <div>
+    <h1>Cellar telemetry at a glance.</h1>
+    <p class="lead">Live readouts for thermals, pump output, and fan RPMs. Profiles and screens are staged until you deploy them.</p>
+  </div>
+  <div class="status-card">
+    <div class="status-card__label">System Pulse</div>
+    <div class="status-card__value">Nominal</div>
+    <div class="status-card__sub">Awaiting liquidctl integration</div>
+  </div>
+</section>
+
+<section class="grid">
+  <div class="metric-card">
+    <div class="metric-card__label">CPU Temp</div>
+    <div class="metric-card__value">{{ metrics.cpu_temp if metrics else "--" }}°C</div>
+    <div class="metric-card__sub">Pi core</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-card__label">Ambient Temp</div>
+    <div class="metric-card__value">{{ metrics.ambient_temp if metrics else "--" }}°C</div>
+    <div class="metric-card__sub">I2C sensors</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-card__label">Fan RPM</div>
+    <div class="metric-card__value">{{ metrics.fan_rpm if metrics else "--" }}</div>
+    <div class="metric-card__sub">Aggregate sample</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-card__label">Pump %</div>
+    <div class="metric-card__value">{{ metrics.pump_percent if metrics else "--" }}%</div>
+    <div class="metric-card__sub">Remote PWM board</div>
+  </div>
+</section>
+
+<section class="split">
+  <div class="panel">
+    <div class="panel__header">
+      <h2>Fan Channels</h2>
+      <span class="panel__tag">Rename coming soon</span>
+    </div>
+    <div class="fan-grid">
+      {% for i in range(1, 8) %}
+      <div class="fan-tile">
+        <div class="fan-tile__title">Fan {{ i }}</div>
+        <div class="fan-tile__value">-- RPM</div>
+        <div class="fan-tile__sub">Awaiting live feed</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel__header">
+      <h2>Telemetry Notes</h2>
+      <span class="panel__tag">Staged</span>
+    </div>
+    <ul class="notes">
+      <li>Liquidctl ingestion will populate fan RPMs and pump curves.</li>
+      <li>SQLite stores metric snapshots for graphing.</li>
+      <li>Profiles are created first, then applied manually or scheduled.</li>
+    </ul>
+  </div>
+</section>
+{% endblock %}
