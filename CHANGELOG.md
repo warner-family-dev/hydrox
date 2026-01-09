@@ -22,3 +22,4 @@
 - Add Raspberry Pi apt repo to install `libraspberrypi-bin` during builds.
 - Mount VideoCore devices into the container for `vcgencmd`.
 - Add build log entry for missing `/dev/vchiq`.
+- Auto-refresh dashboard metrics every 2 seconds.

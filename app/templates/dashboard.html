@@ -15,22 +15,22 @@
 <section class="grid">
   <div class="metric-card">
     <div class="metric-card__label">CPU Temp</div>
-    <div class="metric-card__value">{{ metrics.cpu_temp if metrics else "--" }}°C</div>
+    <div class="metric-card__value" data-metric="cpu_temp">{{ metrics.cpu_temp if metrics else "--" }}°C</div>
     <div class="metric-card__sub">Pi core</div>
   </div>
   <div class="metric-card">
     <div class="metric-card__label">Ambient Temp</div>
-    <div class="metric-card__value">{{ metrics.ambient_temp if metrics else "--" }}°C</div>
+    <div class="metric-card__value" data-metric="ambient_temp">{{ metrics.ambient_temp if metrics else "--" }}°C</div>
     <div class="metric-card__sub">I2C sensors</div>
   </div>
   <div class="metric-card">
     <div class="metric-card__label">Fan RPM</div>
-    <div class="metric-card__value">{{ metrics.fan_rpm if metrics else "--" }}</div>
+    <div class="metric-card__value" data-metric="fan_rpm">{{ metrics.fan_rpm if metrics else "--" }}</div>
     <div class="metric-card__sub">Aggregate sample</div>
   </div>
   <div class="metric-card">
     <div class="metric-card__label">Pump %</div>
-    <div class="metric-card__value">{{ metrics.pump_percent if metrics else "--" }}%</div>
+    <div class="metric-card__value" data-metric="pump_percent">{{ metrics.pump_percent if metrics else "--" }}%</div>
     <div class="metric-card__sub">Remote PWM board</div>
   </div>
 </section>
