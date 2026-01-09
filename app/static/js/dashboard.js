@@ -14,6 +14,7 @@ const fanChart = document.querySelector('[data-chart="fan"]');
 
 const fanPalette = ['#38bdf8', '#818cf8', '#f472b6', '#22c55e', '#eab308', '#f97316', '#a855f7'];
 const fanTiles = document.querySelectorAll('[data-fan-channel]');
+const sensorTiles = document.querySelectorAll('[data-sensor-id]');
 let latestTempSeries = { cpu: [], ambient: [] };
 let latestFanSeries = {};
 let latestTempLabels = [];
@@ -226,6 +227,32 @@ const refreshFanTiles = async () => {
   }
 };
 
+const refreshSensors = async () => {
+  if (!sensorTiles.length) {
+    return;
+  }
+  try {
+    const response = await fetch('/api/sensors/latest', { cache: 'no-store' });
+    if (!response.ok) {
+      return;
+    }
+    const data = await response.json();
+    const readings = data.sensors || [];
+    const valueMap = new Map(readings.map((row) => [String(row.id), row.value]));
+    sensorTiles.forEach((tile) => {
+      const sensorId = tile.getAttribute('data-sensor-id');
+      const valueEl = tile.querySelector('.fan-tile__value');
+      if (!sensorId || !valueEl) {
+        return;
+      }
+      const value = valueMap.get(sensorId);
+      valueEl.textContent = value ?? '--';
+    });
+  } catch (error) {
+    // Ignore transient fetch failures.
+  }
+};
+
 toggles.forEach((toggle) => {
   toggle.addEventListener('change', (event) => {
     const targetId = event.target.getAttribute('data-target');
@@ -343,6 +370,7 @@ refreshMetrics();
 refreshTrend();
 refreshFanChart();
 refreshFanTiles();
+refreshSensors();
 attachTooltip(
   tempChart,
   tempTooltip,
@@ -385,5 +413,6 @@ setInterval(() => {
   refreshTrend();
   refreshFanChart();
   refreshFanTiles();
+  refreshSensors();
   updateLegends();
 }, 2000);

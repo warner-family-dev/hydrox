@@ -11,6 +11,12 @@ from app.services.metrics import (
     latest_metrics,
     read_cpu_temp_vcgencmd,
 )
+from app.services.sensors import (
+    insert_sensor_reading,
+    read_ds18b20_temps,
+    refresh_liquid_sensors,
+    sync_ds18b20_sensors,
+)
 from app.services.system_status import _read_wifi_strength, set_wifi_cache
 
 _daemon_started = False
@@ -25,6 +31,7 @@ def start_daemon() -> None:
     threading.Thread(target=_cpu_sampler, daemon=True).start()
     threading.Thread(target=_fan_sampler, daemon=True).start()
     threading.Thread(target=_wifi_sampler, daemon=True).start()
+    threading.Thread(target=_sensor_sampler, daemon=True).start()
 
 
 def _cpu_sampler() -> None:
@@ -61,3 +68,34 @@ def _wifi_sampler() -> None:
     while True:
         set_wifi_cache(_read_wifi_strength())
         time.sleep(5)
+
+
+def _sensor_sampler() -> None:
+    loops = 0
+    while True:
+        if loops % 12 == 0:
+            sync_ds18b20_sensors()
+        liquid = refresh_liquid_sensors()
+        ds18b20 = read_ds18b20_temps()
+        _store_sensor_readings("liquidctl", liquid)
+        _store_sensor_readings("ds18b20", ds18b20)
+        loops += 1
+        time.sleep(5)
+
+
+def _store_sensor_readings(kind: str, readings: dict[str, float]) -> None:
+    if not readings:
+        return
+    sensor_map = _sensor_id_map(kind)
+    for source_id, value in readings.items():
+        sensor_id = sensor_map.get(source_id)
+        if sensor_id is None:
+            continue
+        insert_sensor_reading(sensor_id, value)
+
+
+def _sensor_id_map(kind: str) -> dict[str, int]:
+    from app.services.sensors import list_sensors
+
+    sensors = list_sensors()
+    return {sensor["source_id"]: sensor["id"] for sensor in sensors if sensor["kind"] == kind}

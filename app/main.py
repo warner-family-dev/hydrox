@@ -22,6 +22,13 @@ from app.services.metrics import (
     recent_metrics,
     seed_metrics_if_empty,
 )
+from app.services.sensors import (
+    format_temp,
+    latest_sensor_readings,
+    list_sensors,
+    seed_sensors_if_empty,
+    update_sensor_settings,
+)
 from app.services.settings import (
     get_active_profile_id,
     get_fan_count,
@@ -67,6 +74,7 @@ def startup() -> None:
     seed_settings_if_empty()
     seed_metrics_if_empty()
     seed_fans_if_empty()
+    seed_sensors_if_empty()
     branch, _ = get_git_status()
     logger = get_logger()
     logger.info("#######")
@@ -88,12 +96,25 @@ def root() -> RedirectResponse:
 def dashboard(request: Request):
     metrics = latest_metrics()
     fans = list_fans(active_only=True)
+    sensors = list_sensors()
+    readings = latest_sensor_readings()
+    sensor_cards = []
+    for sensor in sensors:
+        temp_c = readings.get(sensor["id"])
+        display = format_temp(temp_c, sensor["unit"]) if temp_c is not None else "--"
+        sensor_cards.append(
+            {
+                **sensor,
+                "display": display,
+            }
+        )
     return templates.TemplateResponse(
         "dashboard.html",
         {
             "request": request,
             "metrics": metrics,
             "fans": fans,
+            "sensors": sensor_cards,
         },
     )
 
@@ -216,12 +237,14 @@ def admin_status():
 def settings(request: Request):
     fans = list_fans()
     fan_count = get_fan_count()
+    sensors = list_sensors()
     return templates.TemplateResponse(
         "settings.html",
         {
             "request": request,
             "fans": fans,
             "fan_count": fan_count,
+            "sensors": sensors,
         },
     )
 
@@ -242,6 +265,12 @@ def update_fan(fan_id: int = Form(...), name: str = Form(...), max_rpm: str | No
 def update_fan_count(fan_count: int = Form(...)):
     set_fan_count(fan_count)
     sync_fan_count(get_fan_count())
+    return RedirectResponse("/settings", status_code=303)
+
+
+@app.post("/settings/sensors")
+def update_sensor(sensor_id: int = Form(...), name: str = Form(...), unit: str = Form(...)):
+    update_sensor_settings(sensor_id, name, unit)
     return RedirectResponse("/settings", status_code=303)
 
 
@@ -273,6 +302,24 @@ def get_latest_metrics():
 @app.get("/api/metrics/recent")
 def get_recent_metrics(limit: int = 24):
     return JSONResponse(recent_metrics(limit=limit))
+
+
+@app.get("/api/sensors/latest")
+def get_latest_sensors():
+    sensors = list_sensors()
+    readings = latest_sensor_readings()
+    payload = []
+    for sensor in sensors:
+        temp_c = readings.get(sensor["id"])
+        payload.append(
+            {
+                "id": sensor["id"],
+                "name": sensor["name"],
+                "unit": sensor["unit"],
+                "value": format_temp(temp_c, sensor["unit"]) if temp_c is not None else None,
+            }
+        )
+    return JSONResponse({"sensors": payload})
 
 
 @app.get("/api/fans/percent")

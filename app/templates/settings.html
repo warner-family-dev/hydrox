@@ -52,5 +52,29 @@
     {% endfor %}
   </div>
 </section>
+
+<section class="panel">
+  <div class="panel__header">
+    <h2>Sensors</h2>
+    <span class="panel__tag">Rename</span>
+  </div>
+  <div class="settings-list">
+    {% for sensor in sensors %}
+    <form class="settings-row" method="post" action="/settings/sensors">
+      <input type="hidden" name="sensor_id" value="{{ sensor.id }}" />
+      <div class="settings-row__label">{{ sensor.name }}</div>
+      <div class="settings-row__meta">
+        Default: {{ sensor.default_name }} · {{ sensor.kind }} {{ sensor.source_id }}
+      </div>
+      <input class="form__input" type="text" name="name" value="{{ sensor.name }}" required />
+      <select class="form__input" name="unit">
+        <option value="C" {% if sensor.unit == 'C' %}selected{% endif %}>°C</option>
+        <option value="F" {% if sensor.unit == 'F' %}selected{% endif %}>°F</option>
+      </select>
+      <button class="button button--ghost" type="submit">Update</button>
+    </form>
+    {% endfor %}
+  </div>
+</section>
 <script src="/static/js/settings.js"></script>
 {% endblock %}

@@ -12,6 +12,7 @@ services:
       - /proc/net/wireless:/host-proc/net/wireless:ro
       - /run/wpa_supplicant:/host-run/wpa_supplicant:ro
       - /sys/class/net:/host-sys/class/net:ro
+      - /sys/bus/w1/devices:/sys/bus/w1/devices:ro
       - /sys/devices/platform/cooling_fan:/sys/devices/platform/cooling_fan:ro
       - /sys/class/hwmon:/sys/class/hwmon:ro
     devices:
