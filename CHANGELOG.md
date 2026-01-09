@@ -6,6 +6,7 @@
 - Add font dropdown with bundled DejaVu and Liberation fonts for OLED rendering.
 - Add Publish button to send a saved screen to OLED 1-3.
 - Mount `/dev/i2c-1` for OLED access.
+- Render font names in the dropdown using their own typefaces.
 
 ## v0.0.2 - January 9, 2026
 

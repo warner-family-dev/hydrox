@@ -21,9 +21,9 @@
       <input class="form__input" type="text" name="message_template" placeholder="Ambient: {{ambient_temp}}°C" required />
 
       <label class="form__label">Font Family</label>
-      <select class="form__input" name="font_family" required>
+      <select class="form__input" name="font_family" required data-font-select>
         {% for font in fonts %}
-        <option value="{{ font.key }}" {% if font.key == 'DejaVu Sans Mono' %}selected{% endif %}>{{ font.label }}</option>
+        <option value="{{ font.key }}" data-font-family="{{ font.key }}" style="font-family: '{{ font.key }}', sans-serif;" {% if font.key == 'DejaVu Sans Mono' %}selected{% endif %}>{{ font.label }}</option>
         {% endfor %}
       </select>
 
@@ -73,4 +73,18 @@
     </div>
   </div>
 </section>
+<script>
+  const fontSelect = document.querySelector('[data-font-select]');
+  if (fontSelect) {
+    const applyFont = () => {
+      const selected = fontSelect.selectedOptions[0];
+      const family = selected?.getAttribute('data-font-family');
+      if (family) {
+        fontSelect.style.fontFamily = `'${family}', sans-serif`;
+      }
+    };
+    applyFont();
+    fontSelect.addEventListener('change', applyFont);
+  }
+</script>
 {% endblock %}
