@@ -7,13 +7,14 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR ${APP_HOME}
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates curl gnupg git \
+    && apt-get install -y --no-install-recommends ca-certificates curl gnupg git build-essential \
     && curl -fsSL https://archive.raspberrypi.org/debian/raspberrypi.gpg.key \
       | gpg --dearmor -o /usr/share/keyrings/raspberrypi-archive-keyring.gpg \
     && echo "deb [signed-by=/usr/share/keyrings/raspberrypi-archive-keyring.gpg] http://archive.raspberrypi.org/debian/ bookworm main" \
       > /etc/apt/sources.list.d/raspberrypi.list \
     && apt-get update \
     && apt-get install -y --no-install-recommends libraspberrypi-bin \
+    && apt-get purge -y --auto-remove build-essential \
     && rm -rf /var/lib/apt/lists/* \
     && adduser --disabled-password --gecos '' appuser \
     && mkdir -p /data ${APP_HOME} \

@@ -82,6 +82,7 @@ Build logs append to `logs/builds/docker-compose-buildlog.log`.
 ## Raspberry Pi tooling
 
 - The Docker image enables `vcgencmd` by adding the Raspberry Pi apt repo and installing `libraspberrypi-bin`.
+- The image installs build tooling temporarily to compile `smbus` during `liquidctl` installation.
 - The container needs access to the VideoCore device for `vcgencmd` (`/dev/vcio` on Pi 5).
 - If `/dev/vcio` is missing, create it on the host: `sudo mknod /dev/vcio c 100 0` and ensure Docker can access it.
 - The app calls host `liquidctl` via `/usr/bin/liquidctl` mounted into the container.
