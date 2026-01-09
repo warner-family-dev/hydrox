@@ -39,6 +39,16 @@ from app.services.settings import (
 app = FastAPI(title="Hydrox Command Center")
 
 _cpu_fan_missing_logged = False
+_calibration_lock = threading.Lock()
+_calibration_state = {
+    "running": False,
+    "phase": "idle",
+    "started_at": 0.0,
+    "restore_started_at": 0.0,
+    "completed_at": 0.0,
+}
+_CALIBRATION_SECONDS = 15
+_RESTORE_GRACE_SECONDS = 2
 
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
@@ -265,20 +275,12 @@ def update_fan_count(fan_count: int = Form(...)):
 
 
 @app.post("/settings/fans/calibrate")
-def calibrate_fans():
-    logger = get_logger()
-    fans = list_fans(active_only=True)
-    for fan in fans:
-        set_fan_speed(fan["channel_index"], 100)
-    time.sleep(15)
-    rpms = get_fan_rpms()
-    if not rpms:
-        logger.error("no fan rpms found during calibration")
-    for channel_index, rpm in rpms.items():
-        _update_fan_max_rpm(channel_index, rpm)
-    _restore_after_calibration(fans)
-    logger.info("fan calibration completed")
-    return RedirectResponse("/settings", status_code=303)
+def calibrate_fans(request: Request):
+    if _is_calibration_running():
+        return _calibration_response(request)
+    thread = threading.Thread(target=_run_calibration, daemon=True)
+    thread.start()
+    return _calibration_response(request)
 
 
 @app.post("/api/metrics/ingest")
@@ -325,6 +327,11 @@ def get_latest_fan_rpms():
     return JSONResponse({"fans": latest_fan_readings()})
 
 
+@app.get("/api/calibration/status")
+def get_calibration_status():
+    return JSONResponse(_calibration_status_payload())
+
+
 def _load_profiles():
     with get_connection() as conn:
         rows = conn.execute(
@@ -341,6 +348,74 @@ def _update_fan_max_rpm(channel_index: int, rpm: int) -> None:
     from app.services.fans import update_fan_max_rpm
 
     update_fan_max_rpm(channel_index, rpm)
+
+
+def _run_calibration() -> None:
+    logger = get_logger()
+    fans = list_fans(active_only=True)
+    with _calibration_lock:
+        _calibration_state.update(
+            {
+                "running": True,
+                "phase": "calibrating",
+                "started_at": time.time(),
+                "restore_started_at": 0.0,
+                "completed_at": 0.0,
+            }
+        )
+    for fan in fans:
+        set_fan_speed(fan["channel_index"], 100)
+    time.sleep(_CALIBRATION_SECONDS)
+    rpms = get_fan_rpms()
+    if not rpms:
+        logger.error("no fan rpms found during calibration")
+    for channel_index, rpm in rpms.items():
+        _update_fan_max_rpm(channel_index, rpm)
+    with _calibration_lock:
+        _calibration_state["phase"] = "restoring"
+        _calibration_state["restore_started_at"] = time.time()
+    _restore_after_calibration(fans)
+    with _calibration_lock:
+        _calibration_state.update(
+            {
+                "running": False,
+                "phase": "complete",
+                "completed_at": time.time(),
+            }
+        )
+    logger.info("fan calibration completed")
+
+
+def _calibration_status_payload() -> dict:
+    with _calibration_lock:
+        state = dict(_calibration_state)
+    if not state["running"]:
+        return {"running": False, "phase": "idle", "remaining_seconds": 0}
+    now = time.time()
+    if state["phase"] == "calibrating":
+        remaining = max(0, int(_CALIBRATION_SECONDS - (now - state["started_at"])))
+    elif state["phase"] == "restoring":
+        remaining = max(0, int(_RESTORE_GRACE_SECONDS - (now - state["restore_started_at"])))
+    else:
+        remaining = 0
+    return {
+        "running": True,
+        "phase": state["phase"],
+        "remaining_seconds": remaining,
+    }
+
+
+def _is_calibration_running() -> bool:
+    with _calibration_lock:
+        return bool(_calibration_state["running"])
+
+
+def _calibration_response(request: Request):
+    if "application/json" in request.headers.get("accept", "") or request.headers.get(
+        "x-requested-with"
+    ):
+        return JSONResponse(_calibration_status_payload())
+    return RedirectResponse("/settings", status_code=303)
 
 
 def _restore_after_calibration(fans: list[dict]) -> None:

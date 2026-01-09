@@ -316,6 +316,7 @@ body {
 .trend {
   position: relative;
   margin-top: 6px;
+  padding-bottom: 18px;
 }
 
 .trend__chart {
@@ -352,15 +353,16 @@ body {
 }
 
 .trend__axis--y {
-  top: 18px;
-  left: -6px;
-  transform: rotate(-90deg);
-  transform-origin: left top;
+  top: 50%;
+  left: -12px;
+  transform: translate(-50%, -50%) rotate(-90deg);
+  transform-origin: center;
 }
 
 .trend__axis--x {
-  bottom: -6px;
-  right: 16px;
+  bottom: -14px;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 .form {
