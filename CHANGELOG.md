@@ -13,3 +13,4 @@
 - Add logging strategy docs and initial build log entry.
 - Handle missing git binary gracefully on the Admin page.
 - Install git in the container so Admin can read branch and commit metadata.
+- Add `.dockerignore` to exclude logs, env files, and local artifacts.

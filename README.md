@@ -50,6 +50,7 @@ The service listens on `http://localhost:8000`.
 - Profiles are created first, then applied manually or via schedules.
 - Fan curves are stored per fan channel in the profile JSON and validated on save.
 - Admin metadata falls back to `unknown` when git is unavailable in the container.
+- `.dockerignore` excludes logs, env files, and local dev artifacts.
 
 ## Logging
 
