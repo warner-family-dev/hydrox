@@ -37,3 +37,4 @@
 - Consolidate build logs into `docker-compose-buildlog.log`.
 - Run the container with configured `PUID` and `PGID`.
 - Mount the correct host `liquidctl` binary path.
+- Mount `/sys/class/hwmon` and update CPU fan RPM fallback path.
