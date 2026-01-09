@@ -40,3 +40,4 @@
 - Mount `/sys/class/hwmon` and update CPU fan RPM fallback path.
 - Log system startup entries to `hydrox.log`.
 - Mount the pipx `liquidctl` venv for host CLI access.
+- Add startup banner with boot time and branch in `hydrox.log`.

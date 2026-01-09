@@ -13,7 +13,7 @@ This project keeps a simple, auditable logging flow while the platform is still 
 - Container logs stay in Docker for now (use `docker compose logs -f` or `docker logs hydrox`).
 - If we need retention later, we can add a mounted `logs/runtime/` directory and wire file logging.
 - App runtime errors are also written to `/logs/hydrox.log` inside the container with local TZ timestamps.
-- App startup writes a `system startup` entry to `/logs/hydrox.log`.
+- App startup writes a `system startup` banner with boot time and branch to `/logs/hydrox.log`.
 
 ## App logging
 

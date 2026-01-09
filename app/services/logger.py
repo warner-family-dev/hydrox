@@ -25,6 +25,15 @@ class LocalTimeFormatter(logging.Formatter):
         return dt.strftime("%Y-%m-%d %H:%M:%S")
 
 
+def now_local() -> str:
+    tz_name = os.getenv("TZ", DEFAULT_TZ)
+    try:
+        tzinfo = ZoneInfo(tz_name)
+    except Exception:
+        tzinfo = ZoneInfo(DEFAULT_TZ)
+    return datetime.now(tzinfo).strftime("%Y-%m-%d %H:%M:%S")
+
+
 def get_logger() -> logging.Logger:
     global _logger
     if _logger is not None:

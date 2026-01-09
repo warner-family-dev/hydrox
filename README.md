@@ -77,7 +77,7 @@ Build logs append to `logs/builds/docker-compose-buildlog.log`.
 - Build logs include the local datetime of the run.
 - Build logs record early failures such as missing packages.
 - Runtime logs are kept in Docker for now (use `docker compose logs -f`).
-- App runtime errors and permission issues are written to `/logs/hydrox.log` using local TZ timestamps.
+- App runtime errors and permission issues are written to `/logs/hydrox.log` using local TZ timestamps, with a startup banner.
 - See `docs/logging.md` for the full plan.
 
 ## Raspberry Pi tooling

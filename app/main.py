@@ -18,7 +18,7 @@ from app.services.fan_metrics import (
 from app.services.fans import list_fans, seed_fans_if_empty, sync_fan_count, update_fan_settings
 from app.services.git_info import get_git_status
 from app.services.liquidctl import get_fan_rpms, set_fan_speed
-from app.services.logger import get_logger
+from app.services.logger import get_logger, now_local
 from app.services.metrics import (
     DEFAULT_METRICS,
     insert_metrics,
@@ -57,7 +57,15 @@ def startup() -> None:
     seed_settings_if_empty()
     seed_metrics_if_empty()
     seed_fans_if_empty()
-    get_logger().info("system startup")
+    branch, _ = get_git_status()
+    logger = get_logger()
+    logger.info("#######")
+    logger.info(
+        "System has been started - current boot time is %s and code version is %s",
+        now_local(),
+        branch,
+    )
+    logger.info("#######")
     cpu_thread = threading.Thread(target=_cpu_sampler, daemon=True)
     cpu_thread.start()
     fan_thread = threading.Thread(target=_fan_sampler, daemon=True)
