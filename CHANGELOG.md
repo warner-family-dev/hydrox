@@ -12,6 +12,7 @@
 - Append container logs after compose up to the build log wrapper.
 - Auto-detect Wi-Fi interface when `wlan0` is missing.
 - Revert Wi-Fi detection to host `/proc/net/wireless` bind-mount.
+- Add sysfs Wi-Fi fallback via `/sys/class/net`.
 - Rewrite README to focus on usage, setup, and requirements.
 
 ## v0.0.1 - January 8, 2026

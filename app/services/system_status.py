@@ -139,6 +139,9 @@ def _read_wifi_strength(interface: str = "wlan0") -> dict:
     logger = get_logger()
     proc_path = os.getenv("HYDROX_WIFI_PROC_PATH", "/proc/net/wireless")
     desired = os.getenv("HYDROX_WIFI_INTERFACE", interface)
+    sysfs_result = _read_sysfs_wifi(desired)
+    if sysfs_result is not None:
+        return sysfs_result
     try:
         lines = _read_proc(proc_path).splitlines()[2:]
     except OSError:
@@ -200,14 +203,16 @@ def _wifi_label(percent: int) -> str:
 _wifi_proc_missing_logged = False
 _wifi_parse_logged = False
 _wifi_missing_logged = False
+_wifi_sys_missing_logged = False
 
 
 def _log_wifi_once(flag_name: str, message: str, *args: object) -> None:
-    global _wifi_proc_missing_logged, _wifi_parse_logged, _wifi_missing_logged
+    global _wifi_proc_missing_logged, _wifi_parse_logged, _wifi_missing_logged, _wifi_sys_missing_logged
     flags = {
         "_wifi_proc_missing_logged": _wifi_proc_missing_logged,
         "_wifi_parse_logged": _wifi_parse_logged,
         "_wifi_missing_logged": _wifi_missing_logged,
+        "_wifi_sys_missing_logged": _wifi_sys_missing_logged,
     }
     if flags.get(flag_name):
         return
@@ -218,6 +223,39 @@ def _log_wifi_once(flag_name: str, message: str, *args: object) -> None:
         _wifi_parse_logged = True
     elif flag_name == "_wifi_missing_logged":
         _wifi_missing_logged = True
+    elif flag_name == "_wifi_sys_missing_logged":
+        _wifi_sys_missing_logged = True
+
+
+def _read_sysfs_wifi(interface: str) -> dict | None:
+    base_path = os.getenv("HYDROX_WIFI_SYS_PATH", "/host-sys/class/net")
+    link_path = Path(base_path) / interface / "wireless" / "link"
+    if not link_path.exists():
+        _log_wifi_once(
+            "_wifi_sys_missing_logged",
+            "wifi strength unavailable: %s not found",
+            link_path,
+        )
+        return None
+    try:
+        link_raw = link_path.read_text(encoding="utf-8").strip()
+        link_value = float(link_raw)
+    except OSError:
+        _log_wifi_once(
+            "_wifi_sys_missing_logged",
+            "wifi strength unavailable: %s not readable",
+            link_path,
+        )
+        return None
+    except ValueError:
+        _log_wifi_once(
+            "_wifi_parse_logged",
+            "wifi strength parse error: non-numeric link value for %s",
+            interface,
+        )
+        return None
+    percent = int(max(0, min(100, round(link_value / 70 * 100))))
+    return {"label": _wifi_label(percent), "percent": percent, "interface": interface}
 
 
 def _parse_iw_signal(output: str) -> int | None:
