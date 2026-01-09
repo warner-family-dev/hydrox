@@ -65,5 +65,5 @@ The service listens on `http://localhost:8000`.
 ## Raspberry Pi tooling
 
 - The Docker image enables `vcgencmd` by adding the Raspberry Pi apt repo and installing `libraspberrypi-bin`.
-- The container needs access to the VideoCore device for `vcgencmd` (`/dev/vcio` on Pi 5, `/dev/vchiq` on older models).
+- The container needs access to the VideoCore device for `vcgencmd` (`/dev/vcio` on Pi 5).
 - If `/dev/vcio` is missing, create it on the host: `sudo mknod /dev/vcio c 100 0` and ensure Docker can access it.

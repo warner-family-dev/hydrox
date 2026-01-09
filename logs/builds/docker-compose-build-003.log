@@ -1,0 +1,20 @@
+Command: docker compose up --build
+Local datetime: 2026-01-09 07:27:42 -0600
+Result: failed
+
+Output:
+=> => exporting layers                                                                                                                                                                                                              0.0s
+=> => exporting manifest sha256:8484863ee9df6f157c04cf3f332f6d6a3925ebbe313aeed97f379132d0061c2f                                                                                                                                    0.0s
+=> => exporting config sha256:1dfc59da8f5225242bce9711b6f668da22b4efd356f7a042c9b1833e94c202c6                                                                                                                                      0.0s
+=> => exporting attestation manifest sha256:2dbbde7cdfc76c6d2d1cebd97b502206d828a9ba438eb523602e8b363721ef2c                                                                                                                        0.0s
+=> => exporting manifest list sha256:c17341cd92f6395412164d371d8b9ef3baf08c2e5d39a95d105f3865e104a8db                                                                                                                               0.0s
+=> => naming to docker.io/library/hydrox-hydrox:latest                                                                                                                                                                              0.0s
+=> => unpacking to docker.io/library/hydrox-hydrox:latest                                                                                                                                                                           0.0s
+=> resolving provenance for metadata file                                                                                                                                                                                           0.0s
+[+] up 4/4
+✔ Image hydrox-hydrox       Built                                                                                                                                                                                                   0.8s
+✔ Network hydrox_default    Created                                                                                                                                                                                                 0.1s
+✔ Volume hydrox_hydrox_data Created                                                                                                                                                                                                 0.0s
+✔ Container hydrox          Created                                                                                                                                                                                                 0.1s
+Attaching to hydrox
+Error response from daemon: error gathering device information while adding custom device "/dev/vchiq": no such file or directory
