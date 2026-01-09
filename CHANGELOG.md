@@ -9,6 +9,7 @@
 - Move hardware sampling into an internal daemon thread.
 - Switch Wi-Fi signal collection to `iw` and drop host `/proc` binding.
 - Fix missing threading import that prevented app startup.
+- Append container logs after compose up to the build log wrapper.
 - Rewrite README to focus on usage, setup, and requirements.
 
 ## v0.0.1 - January 8, 2026
