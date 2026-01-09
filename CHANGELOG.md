@@ -4,6 +4,7 @@
 
 - Add configurable fan count controls and chart line toggles.
 - Validate per-fan curve JSON and cron/window schedules on save.
+- Remove legacy compose file version key for Docker Compose v2.
 
 ## v0.0.1 - January 8, 2026
 

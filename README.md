@@ -28,10 +28,14 @@ uvicorn app.main:app --reload
 ## Docker
 
 ```bash
-docker-compose up --build
+docker compose up --build
 ```
 
 The service listens on `http://localhost:8000`.
+
+## Compose notes
+
+- The compose file omits the legacy `version` key (Compose v2+ ignores it).
 
 ## Configuration
 
