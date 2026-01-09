@@ -12,3 +12,4 @@
 - Switch `/data` to a named volume to avoid host permission issues.
 - Add logging strategy docs and initial build log entry.
 - Handle missing git binary gracefully on the Admin page.
+- Install git in the container so Admin can read branch and commit metadata.

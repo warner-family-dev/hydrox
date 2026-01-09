@@ -14,7 +14,7 @@ Hydrox is a Raspberry Pi 5 command center for a wine cellar. It provides a web d
 
 - FastAPI + Jinja templates
 - SQLite for configuration and metric snapshots
-- Docker + docker-compose (single container)
+- Docker + docker-compose (single container, includes git for Admin metadata)
 
 ## Local development
 
