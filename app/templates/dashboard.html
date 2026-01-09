@@ -66,10 +66,11 @@
         <span>Ambient</span>
       </label>
     </div>
+    <div class="legend" data-legend="temperature"></div>
     <div class="trend">
       <div class="trend__axis trend__axis--y">Temperature (°C)</div>
       <div class="trend__axis trend__axis--x">Samples (oldest → newest)</div>
-      <svg viewBox="0 0 520 240" class="trend__chart" aria-hidden="true">
+      <svg viewBox="0 0 520 240" class="trend__chart" data-chart="temperature" aria-hidden="true">
         <g class="trend__grid" id="trend-grid"></g>
         <g class="trend__labels" id="trend-labels"></g>
         <g class="trend__axes">
@@ -81,6 +82,7 @@
           <polyline id="ambient-line" fill="none" stroke="var(--alert)" stroke-width="2" />
         </g>
       </svg>
+      <div class="trend__tooltip" data-tooltip="temperature"></div>
     </div>
     <div class="sparkline__note">Historical samples are seeded until ingestion is wired in.</div>
   </div>
@@ -93,24 +95,25 @@
   </div>
   <div class="sparkline__toggles">
     {% for fan in fans %}
-    <label class="toggle {% if not fan.max_rpm %}toggle--disabled{% endif %}" {% if not fan.max_rpm %}title="Unable to determine fan max RPM - Please calibrate in settings"{% endif %}>
+    <label class="toggle {% if not fan.max_rpm %}toggle--disabled{% endif %}" data-series="fan_{{ fan.channel_index }}" {% if not fan.max_rpm %}title="Unable to determine fan max RPM - Please calibrate in settings"{% endif %}>
       <input type="checkbox" data-target="fan-{{ fan.channel_index }}-line" {% if not fan.max_rpm %}disabled{% endif %} {% if fan.max_rpm %}checked{% endif %} />
       <span>{{ fan.name }}</span>
     </label>
     {% endfor %}
-    <label class="toggle" title="CPU fan max RPM is fixed at 8000">
+    <label class="toggle" data-series="cpu_fan" title="CPU fan max RPM is fixed at 8000">
       <input type="checkbox" data-target="cpu-fan-line" checked />
       <span>CPU Fan</span>
     </label>
-    <label class="toggle">
+    <label class="toggle" data-series="pump">
       <input type="checkbox" data-target="pump-line" checked />
       <span>Pump</span>
     </label>
   </div>
+  <div class="legend" data-legend="fan"></div>
   <div class="trend">
     <div class="trend__axis trend__axis--y">Output (%)</div>
     <div class="trend__axis trend__axis--x">Samples (oldest → newest)</div>
-    <svg viewBox="0 0 520 240" class="trend__chart" aria-hidden="true">
+    <svg viewBox="0 0 520 240" class="trend__chart" data-chart="fan" aria-hidden="true">
       <g class="trend__grid" id="fan-grid"></g>
       <g class="trend__labels" id="fan-labels"></g>
       <g class="trend__axes">
@@ -125,6 +128,7 @@
         <polyline id="pump-line" fill="none" stroke="#f97316" stroke-width="2" />
       </g>
     </svg>
+    <div class="trend__tooltip" data-tooltip="fan"></div>
   </div>
   <div class="sparkline__note">Fan lines require max RPM values from calibration or manual entry.</div>
 </section>

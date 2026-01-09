@@ -55,3 +55,4 @@
 - Format admin commit date using local CPT timestamp.
 - Center chart axis labels and keep calibration modal open until restore.
 - Extend calibration countdown and make it dynamic until restore completes.
+- Add chart legends and hover tooltips.

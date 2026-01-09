@@ -75,6 +75,7 @@ Build logs append to `logs/builds/docker-compose-buildlog.log`.
 - CPU fan RPM reads return 0 when idle; missing sysfs paths log once per boot.
 - Calibration shows a countdown modal while the fan sweep runs (20s + restore grace).
 - Calibration modal stays open until fan speeds are restored.
+- Charts include hover tooltips and legends mapping colors to channels.
 
 ## Logging
 

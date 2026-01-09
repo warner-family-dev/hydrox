@@ -5,9 +5,18 @@ const grid = document.getElementById('trend-grid');
 const labels = document.getElementById('trend-labels');
 const fanGrid = document.getElementById('fan-grid');
 const fanLabels = document.getElementById('fan-labels');
+const tempLegend = document.querySelector('[data-legend="temperature"]');
+const fanLegend = document.querySelector('[data-legend="fan"]');
+const tempTooltip = document.querySelector('[data-tooltip="temperature"]');
+const fanTooltip = document.querySelector('[data-tooltip="fan"]');
+const tempChart = document.querySelector('[data-chart="temperature"]');
+const fanChart = document.querySelector('[data-chart="fan"]');
 
 const fanPalette = ['#38bdf8', '#818cf8', '#f472b6', '#22c55e', '#eab308', '#f97316', '#a855f7'];
 const fanTiles = document.querySelectorAll('[data-fan-channel]');
+let latestTempSeries = { cpu: [], ambient: [] };
+let latestFanSeries = {};
+let latestTempLabels = [];
 
 const metricFormatters = {
   cpu_temp: (value) => `${value}°C`,
@@ -91,6 +100,8 @@ const refreshTrend = async () => {
       }
       line.setAttribute('points', buildPoints(seriesMap[id], rangeMin, rangeMax));
     });
+    latestTempSeries = { cpu, ambient };
+    latestTempLabels = data.map((row) => row.created_at || '');
   } catch (error) {
     // Ignore transient fetch failures.
   }
@@ -150,6 +161,7 @@ const refreshFanChart = async () => {
     }
     const data = await response.json();
     const series = data.series || {};
+    latestFanSeries = series;
     const fanLines = Array.from(document.querySelectorAll('[id^="fan-"][id$="-line"]'));
     fanLines.forEach((line) => {
       const id = line.getAttribute('id');
@@ -231,18 +243,147 @@ const applyFanPalette = () => {
   const fanLines = Array.from(document.querySelectorAll('[id^="fan-"][id$="-line"]'));
   fanLines.forEach((line, index) => {
     line.setAttribute('stroke', fanPalette[index % fanPalette.length]);
+    const label = document.querySelector(`label[data-series="fan_${index + 1}"]`);
+    if (label) {
+      label.style.setProperty('--toggle-color', fanPalette[index % fanPalette.length]);
+    }
+  });
+  const cpuToggle = document.querySelector('label[data-series="cpu_fan"]');
+  if (cpuToggle) {
+    cpuToggle.style.setProperty('--toggle-color', '#22c55e');
+  }
+  const pumpToggle = document.querySelector('label[data-series="pump"]');
+  if (pumpToggle) {
+    pumpToggle.style.setProperty('--toggle-color', '#f97316');
+  }
+  const cpuTempToggle = document.querySelector('label input[data-target="cpu-line"]')?.parentElement;
+  if (cpuTempToggle) {
+    cpuTempToggle.style.setProperty('--toggle-color', 'var(--accent)');
+  }
+  const ambientToggle = document.querySelector('label input[data-target="ambient-line"]')?.parentElement;
+  if (ambientToggle) {
+    ambientToggle.style.setProperty('--toggle-color', 'var(--alert)');
+  }
+};
+
+const buildLegend = (container, items) => {
+  if (!container) {
+    return;
+  }
+  container.innerHTML = items
+    .map(
+      (item) =>
+        `<div class="legend__item"><span class="legend__swatch" style="--legend-color:${item.color}"></span>${item.label}</div>`
+    )
+    .join('');
+};
+
+const updateLegends = () => {
+  buildLegend(tempLegend, [
+    { label: 'CPU', color: 'var(--accent)' },
+    { label: 'Ambient', color: 'var(--alert)' },
+  ]);
+
+  if (!fanLegend) {
+    return;
+  }
+  const fanItems = [];
+  const fanLines = Array.from(document.querySelectorAll('label[data-series^="fan_"]'));
+  fanLines.forEach((label, index) => {
+    const input = label.querySelector('input');
+    if (!input || input.disabled) {
+      return;
+    }
+    const color = fanPalette[index % fanPalette.length];
+    fanItems.push({ label: label.textContent.trim(), color });
+  });
+  fanItems.push({ label: 'CPU Fan', color: '#22c55e' });
+  fanItems.push({ label: 'Pump', color: '#f97316' });
+  buildLegend(fanLegend, fanItems);
+};
+
+const attachTooltip = (chart, tooltipEl, getSeries, unit) => {
+  if (!chart || !tooltipEl) {
+    return;
+  }
+  chart.addEventListener('mousemove', (event) => {
+    const rect = chart.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const clamped = Math.min(Math.max(x - 40, 0), 460);
+    const seriesPayload = getSeries();
+    const length = seriesPayload.length;
+    if (!length) {
+      return;
+    }
+    const index = Math.round((clamped / 460) * (length - 1));
+    const lines = seriesPayload
+      .map((item) => {
+        if (item.values[index] === undefined) {
+          return null;
+        }
+        const value = unit === '%' ? item.values[index].toFixed(1) : item.values[index].toFixed(1);
+        return `${item.label}: ${value}${unit}`;
+      })
+      .filter(Boolean);
+    if (!lines.length) {
+      return;
+    }
+    tooltipEl.innerHTML = lines.join('<br />');
+    tooltipEl.classList.add('trend__tooltip--visible');
+  });
+  chart.addEventListener('mouseleave', () => {
+    tooltipEl.classList.remove('trend__tooltip--visible');
   });
 };
 
 applyFanPalette();
 drawFanGrid();
+updateLegends();
 refreshMetrics();
 refreshTrend();
 refreshFanChart();
 refreshFanTiles();
+attachTooltip(
+  tempChart,
+  tempTooltip,
+  () => [
+    { label: 'CPU', values: latestTempSeries.cpu || [] },
+    { label: 'Ambient', values: latestTempSeries.ambient || [] },
+  ],
+  '°C'
+);
+attachTooltip(
+  fanChart,
+  fanTooltip,
+  () => {
+    const items = [];
+    const fanLabels = document.querySelectorAll('label[data-series^="fan_"]');
+    fanLabels.forEach((label) => {
+      const input = label.querySelector('input');
+      const seriesKey = label.getAttribute('data-series');
+      if (!input || input.disabled || !input.checked || !seriesKey) {
+        return;
+      }
+      const values = latestFanSeries[seriesKey];
+      if (!values) {
+        return;
+      }
+      items.push({ label: label.textContent.trim(), values });
+    });
+    if (latestFanSeries.cpu_fan) {
+      items.push({ label: 'CPU Fan', values: latestFanSeries.cpu_fan });
+    }
+    if (latestFanSeries.pump) {
+      items.push({ label: 'Pump', values: latestFanSeries.pump });
+    }
+    return items;
+  },
+  '%'
+);
 setInterval(() => {
   refreshMetrics();
   refreshTrend();
   refreshFanChart();
   refreshFanTiles();
+  updateLegends();
 }, 2000);

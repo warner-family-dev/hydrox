@@ -354,15 +354,73 @@ body {
 
 .trend__axis--y {
   top: 50%;
-  left: -12px;
+  left: -4px;
   transform: translate(-50%, -50%) rotate(-90deg);
   transform-origin: center;
 }
 
 .trend__axis--x {
-  bottom: -14px;
+  bottom: -6px;
   left: 50%;
   transform: translateX(-50%);
+  width: 100%;
+  text-align: center;
+}
+
+.trend__tooltip {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: rgba(10, 16, 24, 0.95);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 12px;
+  color: var(--text);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  min-width: 140px;
+}
+
+.trend__tooltip--visible {
+  opacity: 1;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(26, 35, 48, 0.5);
+  border: 1px solid var(--border);
+}
+
+.legend__swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--legend-color);
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.25);
+}
+
+.toggle::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--toggle-color, rgba(150, 160, 175, 0.4));
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.2);
 }
 
 .form {
