@@ -59,3 +59,4 @@
 - Add admin status table with uptime, memory usage, and liquidctl connection.
 - Expand admin status table with CPU load, disk usage, RAM percent, and image uptime.
 - Add CI spot-check workflow for PRs into main.
+- Add CI safeguards to block direct pushes to main and prevent dev-docs merges.

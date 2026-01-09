@@ -47,6 +47,7 @@ Build logs append to `logs/builds/docker-compose-buildlog.log`.
 ## CI spot checks
 
 Pull requests to `main` run a lightweight workflow that installs Python deps, byte-compiles the app, and runs tests when present.
+Additional workflows block direct pushes to `main` and prevent `dev-docs/` or `ROADMAP.md` changes from landing on `main`.
 
 ## Compose notes
 
