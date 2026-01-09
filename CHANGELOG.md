@@ -14,6 +14,7 @@
 - Revert Wi-Fi detection to host `/proc/net/wireless` bind-mount.
 - Add sysfs Wi-Fi fallback via `/sys/class/net`.
 - Add wpa_cli signal polling via `/run/wpa_supplicant`.
+- Add admin note that Wi-Fi strength detection needs follow-up.
 - Rewrite README to focus on usage, setup, and requirements.
 
 ## v0.0.1 - January 8, 2026

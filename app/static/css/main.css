@@ -290,6 +290,12 @@ body {
   color: var(--muted);
 }
 
+.wifi-meter__note {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
 .fan-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));

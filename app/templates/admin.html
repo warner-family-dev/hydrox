@@ -61,7 +61,8 @@
           <div class="wifi-meter__label">{{ status.wifi.percent }}% ({{ status.wifi.label }})</div>
         </div>
         {% else %}
-        <span>unknown</span>
+        <div class="wifi-meter__label">unknown</div>
+        <div class="wifi-meter__note">Wi-Fi strength detection needs follow-up.</div>
         {% endif %}
       </td>
     </tr>
