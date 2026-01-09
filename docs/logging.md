@@ -4,10 +4,9 @@ This project keeps a simple, auditable logging flow while the platform is still 
 
 ## Build logs
 
-- Store build or compose run outputs in `logs/builds/`.
-- Use a monotonic suffix, e.g. `docker-compose-build-001.log`.
-- Capture the command, local datetime, result, and raw output for future debugging.
-- Include any inline diagnostics or missing package errors if the build fails early.
+- Store build output in `logs/builds/docker-compose-buildlog.log`.
+- Run `scripts/docker-build-log.py` to append a timestamped record of `docker compose up -d --build`.
+- Each line is prepended with a local timestamp (TZ defaults to `America/Chicago`).
 
 ## Runtime logs
 

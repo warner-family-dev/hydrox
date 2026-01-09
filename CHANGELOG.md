@@ -30,3 +30,4 @@
 - Mount host `liquidctl` and CPU fan sysfs paths into the container.
 - Log hardware and permission errors to `/logs/hydrox.log`.
 - Map app logs to `./logs` and remove the extra `./log` folder.
+- Add build log wrapper script and set TZ to America/Chicago.

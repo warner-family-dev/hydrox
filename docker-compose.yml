@@ -17,6 +17,7 @@ services:
       - HYDROX_GIT_DIR=/.git
       - HYDROX_LIQUIDCTL_PATH=/usr/bin/liquidctl
       - HYDROX_LOG_PATH=/logs/hydrox.log
+      - TZ=America/Chicago
 
 volumes:
   hydrox_data:

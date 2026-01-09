@@ -34,6 +34,16 @@ docker compose up --build
 
 The service listens on `http://localhost:8000`.
 
+## Build logging
+
+Use the wrapper to capture timestamped build output:
+
+```bash
+scripts/docker-build-log.py
+```
+
+Build logs append to `logs/builds/docker-compose-buildlog.log`.
+
 ## Compose notes
 
 - The compose file omits the legacy `version` key (Compose v2+ ignores it).
