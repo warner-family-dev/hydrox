@@ -46,3 +46,4 @@
 - Install liquidctl in a builder stage and remove host mounts.
 - Run the container as root and relax permissions on the embedded liquidctl.
 - Remove `user:` override so root can execute embedded liquidctl.
+- Pass `/dev/bus/usb` into the container for liquidctl device access.
