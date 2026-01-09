@@ -9,7 +9,6 @@ services:
       - hydrox_data:/data
       - ./.git:/.git:ro
       - ./logs:/logs
-      - /proc/net/wireless:/host-proc/net/wireless:ro
       - /sys/devices/platform/cooling_fan:/sys/devices/platform/cooling_fan:ro
       - /sys/class/hwmon:/sys/class/hwmon:ro
     devices:
@@ -19,7 +18,6 @@ services:
       - HYDROX_DB_PATH=/data/hydrox.db
       - HYDROX_GIT_DIR=/.git
       - HYDROX_LOG_PATH=/logs/hydrox.log
-      - HYDROX_WIFI_PROC_PATH=/host-proc/net/wireless
       - HYDROX_WIFI_INTERFACE=wlan0
       - TZ=America/Chicago
       - PUID=1000
