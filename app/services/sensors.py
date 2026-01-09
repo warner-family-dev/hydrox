@@ -82,6 +82,26 @@ def latest_sensor_readings() -> dict[int, float]:
         return {row["sensor_id"]: row["temp_c"] for row in rows}
 
 
+def recent_sensor_readings(limit: int = 24) -> dict[int, list[float]]:
+    with get_connection() as conn:
+        rows = conn.execute(
+            """
+            SELECT sensor_id, temp_c, created_at
+            FROM sensor_readings
+            ORDER BY created_at DESC, id DESC
+            """
+        ).fetchall()
+        grouped: dict[int, list[float]] = {}
+        for row in rows:
+            sensor_id = row["sensor_id"]
+            grouped.setdefault(sensor_id, [])
+            if len(grouped[sensor_id]) < limit:
+                grouped[sensor_id].append(row["temp_c"])
+        for sensor_id, values in grouped.items():
+            grouped[sensor_id] = list(reversed(values))
+        return grouped
+
+
 def insert_sensor_reading(sensor_id: int, temp_c: float) -> None:
     with get_connection() as conn:
         conn.execute(

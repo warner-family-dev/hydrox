@@ -26,6 +26,7 @@ from app.services.sensors import (
     format_temp,
     latest_sensor_readings,
     list_sensors,
+    recent_sensor_readings,
     seed_sensors_if_empty,
     update_sensor_settings,
 )
@@ -303,6 +304,33 @@ def get_latest_metrics():
 def get_recent_metrics(limit: int = 24):
     return JSONResponse(recent_metrics(limit=limit))
 
+
+@app.get("/api/temperature/recent")
+def get_recent_temperatures(limit: int = 24):
+    metrics_rows = recent_metrics(limit=limit)
+    cpu = [row["cpu_temp"] for row in metrics_rows]
+    ambient = [row["ambient_temp"] for row in metrics_rows]
+    sensor_series = recent_sensor_readings(limit=limit)
+    sensors = list_sensors()
+    sensor_map = {sensor["id"]: sensor for sensor in sensors}
+    series = {
+        "cpu": cpu,
+        "ambient": ambient,
+    }
+    for sensor_id, values in sensor_series.items():
+        series[f"sensor_{sensor_id}"] = values
+    labels = [row.get("created_at", "") for row in metrics_rows]
+    return JSONResponse(
+        {
+            "series": series,
+            "labels": labels,
+            "sensors": [
+                {"id": sensor["id"], "name": sensor["name"]}
+                for sensor in sensors
+                if sensor["id"] in sensor_map
+            ],
+        }
+    )
 
 @app.get("/api/sensors/latest")
 def get_latest_sensors():
