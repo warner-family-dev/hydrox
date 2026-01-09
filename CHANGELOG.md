@@ -44,3 +44,4 @@
 - Mount the pipx venv at its original path for `liquidctl` shebangs.
 - Add liquidctl path fallback to the container binary.
 - Install liquidctl in a builder stage and remove host mounts.
+- Run the container as root and relax permissions on the embedded liquidctl.

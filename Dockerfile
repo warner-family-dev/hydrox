@@ -38,13 +38,12 @@ RUN apt-get update \
     && chown -R appuser:appuser /data ${APP_HOME}
 
 COPY --from=liquidctl-builder /root/.local /root/.local
+RUN chmod -R a+rx /root/.local
 
 COPY requirements.txt ${APP_HOME}/requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app ${APP_HOME}/app
-
-USER appuser
 
 EXPOSE 8000
 
