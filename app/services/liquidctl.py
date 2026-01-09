@@ -68,7 +68,8 @@ def get_liquid_temps() -> list[float]:
     _, stdout, _ = _run_liquidctl(["status"])
     temps: list[float] = []
     for line in stdout.splitlines():
-        if "temp" not in line.lower():
+        lowered = line.lower()
+        if "temp" not in lowered and "sensor" not in lowered:
             continue
         match = re.search(r"(-?\d+(?:\.\d+)?)\s*°?C", line)
         if match:

@@ -16,6 +16,7 @@
 - Add wpa_cli signal polling via `/run/wpa_supplicant`.
 - Add admin note that Wi-Fi strength detection needs follow-up.
 - Add sensor management with DS18B20 discovery, Liquid Temp 1/2 mapping, and unit conversion.
+- Parse liquidctl sensor temperature lines for Liquid Temp 1/2.
 - Rewrite README to focus on usage, setup, and requirements.
 
 ## v0.0.1 - January 8, 2026
