@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+  <div>
+    <h1>Admin</h1>
+    <p class="lead">System identity and build metadata for the command center.</p>
+  </div>
+</section>
+
+<section class="grid">
+  <div class="metric-card">
+    <div class="metric-card__label">Git Branch</div>
+    <div class="metric-card__value">{{ branch }}</div>
+    <div class="metric-card__sub">From repository metadata</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-card__label">Commit Date</div>
+    <div class="metric-card__value">{{ commit_date }}</div>
+    <div class="metric-card__sub">Last recorded commit</div>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="panel__header">
+    <h2>Status</h2>
+    <span class="panel__tag">Daemon</span>
+  </div>
+  <table class="status-table">
+    <tr>
+      <th>Status</th>
+      <td class="status-cell"><span class="status-dot status-dot--ok"></span>{{ status.status }}</td>
+    </tr>
+    <tr>
+      <th>Host Uptime</th>
+      <td>{{ status.host_uptime }}</td>
+    </tr>
+    <tr>
+      <th>Image Uptime</th>
+      <td>{{ status.image_uptime }}</td>
+    </tr>
+    <tr>
+      <th>CPU Load</th>
+      <td>{{ status.cpu }}</td>
+    </tr>
+    <tr>
+      <th>RAM Usage</th>
+      <td>{{ status.memory }}</td>
+    </tr>
+    <tr>
+      <th>Disk /</th>
+      <td>{{ status.disk_root }}</td>
+    </tr>
+    <tr>
+      <th>Disk /data</th>
+      <td>{{ status.disk_data }}</td>
+    </tr>
+    <tr>
+      <th>Liquidctl</th>
+      <td>{{ status.liquidctl }}</td>
+    </tr>
+  </table>
+</section>
+{% endblock %}

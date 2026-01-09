@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+  <div>
+    <h1>Cellar telemetry at a glance.</h1>
+    <p class="lead">Live readouts for thermals, pump output, and fan RPMs. Profiles and screens are staged until you deploy them.</p>
+  </div>
+  <div class="status-card">
+    <div class="status-card__label">System Pulse</div>
+    <div class="status-card__value">Nominal</div>
+    <div class="status-card__sub">Awaiting liquidctl integration</div>
+  </div>
+</section>
+
+<section class="grid">
+  <div class="metric-card">
+    <div class="metric-card__label">CPU Temp</div>
+    <div class="metric-card__value" data-metric="cpu_temp">{{ metrics.cpu_temp if metrics else "--" }}°C</div>
+    <div class="metric-card__sub">Pi core</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-card__label">Ambient Temp</div>
+    <div class="metric-card__value" data-metric="ambient_temp">{{ metrics.ambient_temp if metrics else "--" }}°C</div>
+    <div class="metric-card__sub">I2C sensors</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-card__label">Fan RPM</div>
+    <div class="metric-card__value" data-metric="fan_rpm">{{ metrics.fan_rpm if metrics else "--" }}</div>
+    <div class="metric-card__sub">Aggregate sample</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-card__label">Pump %</div>
+    <div class="metric-card__value" data-metric="pump_percent">{{ metrics.pump_percent if metrics else "--" }}%</div>
+    <div class="metric-card__sub">Remote PWM board</div>
+  </div>
+</section>
+
+<section class="split">
+  <div class="panel">
+    <div class="panel__header">
+      <h2>Fan Channels</h2>
+      <span class="panel__tag">Configurable</span>
+    </div>
+    <div class="fan-grid">
+      {% for fan in fans %}
+      <div class="fan-tile" data-fan-channel="{{ fan.channel_index }}">
+        <div class="fan-tile__title">{{ fan.name }}</div>
+        <div class="fan-tile__value">-- RPM</div>
+        <div class="fan-tile__sub">Awaiting live feed</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel__header">
+      <h2>Temperature Trend</h2>
+      <span class="panel__tag">Last 12 samples</span>
+    </div>
+    <div class="sparkline__toggles">
+      <label class="toggle">
+        <input type="checkbox" data-target="cpu-line" checked />
+        <span>CPU</span>
+      </label>
+      <label class="toggle">
+        <input type="checkbox" data-target="ambient-line" checked />
+        <span>Ambient</span>
+      </label>
+    </div>
+    <div class="legend" data-legend="temperature"></div>
+    <div class="trend">
+      <div class="trend__axis trend__axis--y">Temperature (°C)</div>
+      <div class="trend__axis trend__axis--x">Samples (oldest → newest)</div>
+      <svg viewBox="0 0 520 240" class="trend__chart" data-chart="temperature" aria-hidden="true">
+        <g class="trend__grid" id="trend-grid"></g>
+        <g class="trend__labels" id="trend-labels"></g>
+        <g class="trend__axes">
+          <line x1="40" y1="20" x2="40" y2="210" />
+          <line x1="40" y1="210" x2="500" y2="210" />
+        </g>
+        <g class="trend__lines">
+          <polyline id="cpu-line" fill="none" stroke="var(--accent)" stroke-width="2" />
+          <polyline id="ambient-line" fill="none" stroke="var(--alert)" stroke-width="2" />
+        </g>
+      </svg>
+      <div class="trend__tooltip" data-tooltip="temperature"></div>
+    </div>
+    <div class="sparkline__note">Historical samples are seeded until ingestion is wired in.</div>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="panel__header">
+    <h2>Fan Output</h2>
+    <span class="panel__tag">Percent of max RPM</span>
+  </div>
+  <div class="sparkline__toggles">
+    {% for fan in fans %}
+    <label class="toggle {% if not fan.max_rpm %}toggle--disabled{% endif %}" data-series="fan_{{ fan.channel_index }}" {% if not fan.max_rpm %}title="Unable to determine fan max RPM - Please calibrate in settings"{% endif %}>
+      <input type="checkbox" data-target="fan-{{ fan.channel_index }}-line" {% if not fan.max_rpm %}disabled{% endif %} {% if fan.max_rpm %}checked{% endif %} />
+      <span>{{ fan.name }}</span>
+    </label>
+    {% endfor %}
+    <label class="toggle" data-series="cpu_fan" title="CPU fan max RPM is fixed at 8000">
+      <input type="checkbox" data-target="cpu-fan-line" checked />
+      <span>CPU Fan</span>
+    </label>
+    <label class="toggle" data-series="pump">
+      <input type="checkbox" data-target="pump-line" checked />
+      <span>Pump</span>
+    </label>
+  </div>
+  <div class="legend" data-legend="fan"></div>
+  <div class="trend">
+    <div class="trend__axis trend__axis--y">Output (%)</div>
+    <div class="trend__axis trend__axis--x">Samples (oldest → newest)</div>
+    <svg viewBox="0 0 520 240" class="trend__chart" data-chart="fan" aria-hidden="true">
+      <g class="trend__grid" id="fan-grid"></g>
+      <g class="trend__labels" id="fan-labels"></g>
+      <g class="trend__axes">
+        <line x1="40" y1="20" x2="40" y2="210" />
+        <line x1="40" y1="210" x2="500" y2="210" />
+      </g>
+      <g class="trend__lines">
+        {% for fan in fans %}
+        <polyline id="fan-{{ fan.channel_index }}-line" fill="none" stroke="var(--accent)" stroke-width="2" />
+        {% endfor %}
+        <polyline id="cpu-fan-line" fill="none" stroke="#22c55e" stroke-width="2" />
+        <polyline id="pump-line" fill="none" stroke="#f97316" stroke-width="2" />
+      </g>
+    </svg>
+    <div class="trend__tooltip" data-tooltip="fan"></div>
+  </div>
+  <div class="sparkline__note">Fan lines require max RPM values from calibration or manual entry.</div>
+</section>
+<script src="/static/js/dashboard.js"></script>
+{% endblock %}

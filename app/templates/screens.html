@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+  <div>
+    <h1>Screen Updater</h1>
+    <p class="lead">Stage one message per OLED panel now, then add multi-message playlists later. Assign tags and rotation timing.</p>
+  </div>
+</section>
+
+<section class="split">
+  <div class="panel">
+    <div class="panel__header">
+      <h2>Configure Screen</h2>
+      <span class="panel__tag">OLED 128x64</span>
+    </div>
+    <form class="form" method="post" action="/screens">
+      <label class="form__label">Screen Name</label>
+      <input class="form__input" type="text" name="name" placeholder="North Panel" required />
+
+      <label class="form__label">Message Template</label>
+      <input class="form__input" type="text" name="message_template" placeholder="Ambient: {{ambient_temp}}°C" required />
+
+      <label class="form__label">Font Family</label>
+      <input class="form__input" type="text" name="font_family" value="IBM Plex Mono" required />
+
+      <label class="form__label">Font Size</label>
+      <input class="form__input" type="number" name="font_size" value="12" min="8" max="32" required />
+
+      <label class="form__label">Rotation Interval (seconds)</label>
+      <input class="form__input" type="number" name="rotation_seconds" value="15" min="5" max="600" required />
+
+      <label class="form__label">Tag (optional)</label>
+      <input class="form__input" type="text" name="tag" placeholder="pump" />
+
+      <button class="button" type="submit">Save Screen</button>
+    </form>
+  </div>
+  <div class="panel">
+    <div class="panel__header">
+      <h2>Saved Screens</h2>
+      <span class="panel__tag">Rotations</span>
+    </div>
+    <div class="list">
+      {% if screens %}
+        {% for screen in screens %}
+        <div class="list__item">
+          <div class="list__title">{{ screen.name }}</div>
+          <div class="list__meta">{{ screen.created_at }}</div>
+          <div class="list__body">Message: {{ screen.message_template }}</div>
+          <div class="list__body">Font: {{ screen.font_family }} / {{ screen.font_size }}px</div>
+          <div class="list__body">Rotation: {{ screen.rotation_seconds }}s</div>
+          {% if screen.tag %}
+          <div class="list__body">Tag: {{ screen.tag }}</div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="empty">No screens yet. Add your first OLED rotation.</div>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}

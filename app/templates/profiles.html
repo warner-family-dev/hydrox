@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+  <div>
+    <h1>Profile Creator</h1>
+    <p class="lead">Draft per-channel fan and pump curves, then assign cron rules and weekday windows. Profiles never auto-apply.</p>
+  </div>
+</section>
+
+<section class="split">
+  <div class="panel">
+    <div class="panel__header">
+      <h2>Create Profile</h2>
+      <span class="panel__tag">Draft</span>
+    </div>
+    {% if error %}
+    <div class="alert">{{ error }}</div>
+    {% endif %}
+    <form class="form" method="post" action="/profiles">
+      <label class="form__label">Profile Name</label>
+      <input class="form__input" type="text" name="name" placeholder="Cellar Quiet Curve" required />
+
+      <label class="form__label">Curve JSON (per fan channel)</label>
+      <textarea class="form__textarea" name="curve_json" rows="6" placeholder='{"fan_1": [{"temp": 18, "fan": 30}, {"temp": 22, "fan": 55}], "fan_2": [{"temp": 18, "fan": 28}]}' required></textarea>
+
+      <label class="form__label">Schedule JSON (cron + window, optional)</label>
+      <textarea class="form__textarea" name="schedule_json" rows="5" placeholder='{"cron": "0 18 * * *", "window": {"days": ["Mon", "Wed"], "start": "18:00", "end": "06:00"}}'></textarea>
+
+      <button class="button" type="submit">Save Profile</button>
+    </form>
+  </div>
+  <div class="panel">
+    <div class="panel__header">
+      <h2>Saved Profiles</h2>
+      <span class="panel__tag">SQLite</span>
+    </div>
+    <div class="list">
+      {% if profiles %}
+        {% for profile in profiles %}
+        <div class="list__item">
+          <div class="list__title">
+            {{ profile.name }}
+            {% if active_profile_id == profile.id %}
+            <span class="list__badge">Active</span>
+            {% endif %}
+          </div>
+          <div class="list__meta">{{ profile.created_at }}</div>
+          <div class="list__body">Curve: {{ profile.curve_json }}</div>
+          {% if profile.schedule_json %}
+          <div class="list__body">Schedule: {{ profile.schedule_json }}</div>
+          {% endif %}
+          <form method="post" action="/profiles/apply">
+            <input type="hidden" name="profile_id" value="{{ profile.id }}" />
+            <button class="button button--ghost" type="submit">Apply Profile</button>
+          </form>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="empty">No profiles yet. Create the first curve to get started.</div>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}
