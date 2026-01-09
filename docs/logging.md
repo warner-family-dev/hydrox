@@ -6,7 +6,7 @@ This project keeps a simple, auditable logging flow while the platform is still 
 
 - Store build or compose run outputs in `logs/builds/`.
 - Use a monotonic suffix, e.g. `docker-compose-build-001.log`.
-- Capture the command, result, and raw output for future debugging.
+- Capture the command, local datetime, result, and raw output for future debugging.
 
 ## Runtime logs
 

@@ -16,3 +16,4 @@
 - Add `.dockerignore` to exclude logs, env files, and local artifacts.
 - Add `.gitignore` for logs, env files, and local artifacts.
 - Sample CPU temp via `vcgencmd` in a background thread.
+- Add local datetime to build logs.
