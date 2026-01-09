@@ -24,21 +24,29 @@
       <input class="form__input" type="text" name="value_template" placeholder="{{fan3_rpm}}" required />
 
       <label class="form__label">Title Font</label>
-      <select class="form__input" name="title_font_family" required data-font-select>
-        {% for font in fonts %}
-        <option value="{{ font.key }}" data-font-family="{{ font.key }}" style="font-family: '{{ font.key }}', sans-serif;" {% if font.key == 'DejaVu Sans Mono' %}selected{% endif %}>{{ font.label }}</option>
-        {% endfor %}
-      </select>
+      <div class="font-select" data-font-select data-current="DejaVu Sans Mono">
+        <input type="hidden" name="title_font_family" value="DejaVu Sans Mono" />
+        <button class="font-select__button" type="button"></button>
+        <div class="font-select__options">
+          {% for font in fonts %}
+          <button class="font-select__option" type="button" data-value="{{ font.key }}" style="font-family: '{{ font.key }}', sans-serif;">{{ font.label }}</button>
+          {% endfor %}
+        </div>
+      </div>
 
       <label class="form__label">Title Font Size</label>
       <input class="form__input" type="number" name="title_font_size" value="16" min="8" max="32" required />
 
       <label class="form__label">Value Font</label>
-      <select class="form__input" name="value_font_family" required data-font-select>
-        {% for font in fonts %}
-        <option value="{{ font.key }}" data-font-family="{{ font.key }}" style="font-family: '{{ font.key }}', sans-serif;" {% if font.key == 'DejaVu Sans Mono' %}selected{% endif %}>{{ font.label }}</option>
-        {% endfor %}
-      </select>
+      <div class="font-select" data-font-select data-current="DejaVu Sans Mono">
+        <input type="hidden" name="value_font_family" value="DejaVu Sans Mono" />
+        <button class="font-select__button" type="button"></button>
+        <div class="font-select__options">
+          {% for font in fonts %}
+          <button class="font-select__option" type="button" data-value="{{ font.key }}" style="font-family: '{{ font.key }}', sans-serif;">{{ font.label }}</button>
+          {% endfor %}
+        </div>
+      </div>
 
       <label class="form__label">Value Font Size</label>
       <input class="form__input" type="number" name="value_font_size" value="22" min="8" max="40" required />
@@ -81,21 +89,29 @@
             <input class="form__input" type="text" name="value_template" value="{{ screen.value_template or screen.message_template }}" required />
 
             <label class="form__label">Title Font</label>
-            <select class="form__input" name="title_font_family" required>
-              {% for font in fonts %}
-              <option value="{{ font.key }}" {% if font.key == (screen.title_font_family or screen.font_family) %}selected{% endif %}>{{ font.label }}</option>
-              {% endfor %}
-            </select>
+            <div class="font-select" data-font-select data-current="{{ screen.title_font_family or screen.font_family or 'DejaVu Sans Mono' }}">
+              <input type="hidden" name="title_font_family" value="{{ screen.title_font_family or screen.font_family or 'DejaVu Sans Mono' }}" />
+              <button class="font-select__button" type="button"></button>
+              <div class="font-select__options">
+                {% for font in fonts %}
+                <button class="font-select__option" type="button" data-value="{{ font.key }}" style="font-family: '{{ font.key }}', sans-serif;">{{ font.label }}</button>
+                {% endfor %}
+              </div>
+            </div>
 
             <label class="form__label">Title Font Size</label>
             <input class="form__input" type="number" name="title_font_size" value="{{ screen.title_font_size or 16 }}" min="8" max="32" required />
 
             <label class="form__label">Value Font</label>
-            <select class="form__input" name="value_font_family" required>
-              {% for font in fonts %}
-              <option value="{{ font.key }}" {% if font.key == (screen.value_font_family or screen.font_family) %}selected{% endif %}>{{ font.label }}</option>
-              {% endfor %}
-            </select>
+            <div class="font-select" data-font-select data-current="{{ screen.value_font_family or screen.font_family or 'DejaVu Sans Mono' }}">
+              <input type="hidden" name="value_font_family" value="{{ screen.value_font_family or screen.font_family or 'DejaVu Sans Mono' }}" />
+              <button class="font-select__button" type="button"></button>
+              <div class="font-select__options">
+                {% for font in fonts %}
+                <button class="font-select__option" type="button" data-value="{{ font.key }}" style="font-family: '{{ font.key }}', sans-serif;">{{ font.label }}</button>
+                {% endfor %}
+              </div>
+            </div>
 
             <label class="form__label">Value Font Size</label>
             <input class="form__input" type="number" name="value_font_size" value="{{ screen.value_font_size or screen.font_size }}" min="8" max="40" required />
@@ -153,16 +169,45 @@
 </section>
 <script>
   const fontSelects = document.querySelectorAll('[data-font-select]');
+  const closeAllSelects = () => {
+    fontSelects.forEach((select) => select.classList.remove('font-select--open'));
+  };
+  document.addEventListener('click', (event) => {
+    if (!event.target.closest('.font-select')) {
+      closeAllSelects();
+    }
+  });
   fontSelects.forEach((select) => {
-    const applyFont = () => {
-      const selected = select.selectedOptions[0];
-      const family = selected?.getAttribute('data-font-family');
-      if (family) {
-        select.style.fontFamily = `'${family}', sans-serif`;
+    const button = select.querySelector('.font-select__button');
+    const options = Array.from(select.querySelectorAll('.font-select__option'));
+    const hidden = select.querySelector('input[type="hidden"]');
+    const current = select.getAttribute('data-current') || hidden?.value;
+    const applyFont = (value) => {
+      const option = options.find((item) => item.getAttribute('data-value') === value);
+      if (!option) {
+        return;
       }
+      button.textContent = option.textContent;
+      button.style.fontFamily = option.style.fontFamily;
+      hidden.value = value;
     };
-    applyFont();
-    select.addEventListener('change', applyFont);
+    applyFont(current);
+    button.addEventListener('click', () => {
+      const isOpen = select.classList.contains('font-select--open');
+      closeAllSelects();
+      if (!isOpen) {
+        select.classList.add('font-select--open');
+      }
+    });
+    options.forEach((option) => {
+      option.addEventListener('click', () => {
+        const value = option.getAttribute('data-value');
+        if (value) {
+          applyFont(value);
+        }
+        select.classList.remove('font-select--open');
+      });
+    });
   });
 </script>
 {% endblock %}

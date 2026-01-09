@@ -648,6 +648,56 @@ body {
   color: var(--text);
 }
 
+.font-select {
+  position: relative;
+}
+
+.font-select__button {
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(20, 27, 38, 0.6);
+  border: 1px solid var(--border);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.font-select__options {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 6px;
+  display: none;
+  z-index: 5;
+  max-height: 220px;
+  overflow-y: auto;
+  box-shadow: var(--shadow);
+}
+
+.font-select--open .font-select__options {
+  display: block;
+}
+
+.font-select__option {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  padding: 8px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.font-select__option:hover {
+  background: rgba(59, 130, 246, 0.15);
+}
+
 .empty {
   font-size: 13px;
   color: var(--muted);
