@@ -73,7 +73,7 @@ Build logs append to `logs/builds/docker-compose-buildlog.log`.
 - Dashboard metrics auto-refresh every 2 seconds via the metrics API, with a single temperature trend chart.
 - Fan output chart uses max RPM values from Settings calibration or manual entry.
 - CPU fan RPM reads return 0 when idle; missing sysfs paths log once per boot.
-- Calibration shows a countdown modal while the fan sweep runs.
+- Calibration shows a countdown modal while the fan sweep runs (20s + restore grace).
 - Calibration modal stays open until fan speeds are restored.
 
 ## Logging

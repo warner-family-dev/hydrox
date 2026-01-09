@@ -54,3 +54,4 @@
 - Add calibration countdown modal and dashboard fan RPM updates.
 - Format admin commit date using local CPT timestamp.
 - Center chart axis labels and keep calibration modal open until restore.
+- Extend calibration countdown and make it dynamic until restore completes.

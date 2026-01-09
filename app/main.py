@@ -47,8 +47,8 @@ _calibration_state = {
     "restore_started_at": 0.0,
     "completed_at": 0.0,
 }
-_CALIBRATION_SECONDS = 15
-_RESTORE_GRACE_SECONDS = 2
+_CALIBRATION_SECONDS = 20
+_RESTORE_GRACE_SECONDS = 5
 
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
@@ -392,12 +392,8 @@ def _calibration_status_payload() -> dict:
     if not state["running"]:
         return {"running": False, "phase": "idle", "remaining_seconds": 0}
     now = time.time()
-    if state["phase"] == "calibrating":
-        remaining = max(0, int(_CALIBRATION_SECONDS - (now - state["started_at"])))
-    elif state["phase"] == "restoring":
-        remaining = max(0, int(_RESTORE_GRACE_SECONDS - (now - state["restore_started_at"])))
-    else:
-        remaining = 0
+    total_duration = _CALIBRATION_SECONDS + _RESTORE_GRACE_SECONDS
+    remaining = max(0, int(total_duration - (now - state["started_at"])))
     return {
         "running": True,
         "phase": state["phase"],

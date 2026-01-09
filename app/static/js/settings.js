@@ -8,7 +8,7 @@ if (calibrateForm && calibrateModal && timerEl) {
     event.preventDefault();
     calibrateModal.classList.add('modal--open');
     calibrateModal.setAttribute('aria-hidden', 'false');
-    timerEl.textContent = '00:15';
+    timerEl.textContent = '00:20';
     if (noteEl) {
       noteEl.textContent = 'Calibration is running. This window will close when the timer ends.';
     }
