@@ -41,3 +41,4 @@
 - Log system startup entries to `hydrox.log`.
 - Mount the pipx `liquidctl` venv for host CLI access.
 - Add startup banner with boot time and branch in `hydrox.log`.
+- Mount the pipx venv at its original path for `liquidctl` shebangs.
