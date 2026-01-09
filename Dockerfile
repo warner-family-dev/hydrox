@@ -7,7 +7,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR ${APP_HOME}
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends git \
+    && apt-get install -y --no-install-recommends git libraspberrypi-bin \
     && rm -rf /var/lib/apt/lists/* \
     && adduser --disabled-password --gecos '' appuser \
     && mkdir -p /data ${APP_HOME} \
