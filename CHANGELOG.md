@@ -7,6 +7,7 @@
 - Auto-refresh admin status metrics every 5 seconds.
 - Add Wi-Fi interface fallback and log missing interface once per boot.
 - Move hardware sampling into an internal daemon thread.
+- Add `HYDROX_WIFI_PROC_PATH` support and mount host `/proc/net/wireless`.
 - Rewrite README to focus on usage, setup, and requirements.
 
 ## v0.0.1 - January 8, 2026

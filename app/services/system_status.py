@@ -137,11 +137,16 @@ def get_wifi_strength(interface: str = "wlan0") -> dict:
 
 def _read_wifi_strength(interface: str = "wlan0") -> dict:
     logger = get_logger()
+    proc_path = os.getenv("HYDROX_WIFI_PROC_PATH", "/proc/net/wireless")
     desired = os.getenv("HYDROX_WIFI_INTERFACE", interface)
     try:
-        lines = _read_proc("/proc/net/wireless").splitlines()[2:]
+        lines = _read_proc(proc_path).splitlines()[2:]
     except OSError:
-        _log_wifi_once("_wifi_proc_missing_logged", "wifi strength unavailable: /proc/net/wireless not readable")
+        _log_wifi_once(
+            "_wifi_proc_missing_logged",
+            "wifi strength unavailable: %s not readable",
+            proc_path,
+        )
         return {"label": "unknown", "percent": None, "interface": desired}
     entries: dict[str, float] = {}
     for line in lines:
