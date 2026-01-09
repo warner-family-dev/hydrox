@@ -13,7 +13,6 @@ __pycache__/
 .idea/
 .DS_Store
 logs/
-log/
 data/
 venv/
 .venv/

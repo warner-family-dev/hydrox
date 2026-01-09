@@ -29,3 +29,4 @@
 - Add fan calibration workflow and active profile apply setting.
 - Mount host `liquidctl` and CPU fan sysfs paths into the container.
 - Log hardware and permission errors to `/logs/hydrox.log`.
+- Map app logs to `./logs` and remove the extra `./log` folder.

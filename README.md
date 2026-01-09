@@ -39,7 +39,7 @@ The service listens on `http://localhost:8000`.
 - The compose file omits the legacy `version` key (Compose v2+ ignores it).
 - The container runs as a non-root user and writes SQLite data to `/data`.
 - Compose now uses a named volume for `/data` to avoid host permission issues.
-- App logs are written to `/logs/hydrox.log` (mapped to `./log` on the host).
+- App logs are written to `/logs/hydrox.log` (mapped to `./logs` on the host).
 
 ## Configuration
 

@@ -7,7 +7,7 @@ services:
     volumes:
       - hydrox_data:/data
       - ./.git:/.git:ro
-      - ./log:/logs
+      - ./logs:/logs
       - /usr/bin/liquidctl:/usr/bin/liquidctl:ro
       - /sys/devices/platform/cooling_fan:/sys/devices/platform/cooling_fan:ro
     devices:
