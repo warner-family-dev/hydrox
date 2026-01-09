@@ -49,19 +49,6 @@ def _cpu_sampler() -> None:
         time.sleep(5)
 
 
-def _build_sparkline_points(values: list[float], width: int = 140, height: int = 40) -> str:
-    if not values:
-        return ""
-    min_val = min(values)
-    max_val = max(values)
-    span = max(max_val - min_val, 0.01)
-    points = []
-    for index, value in enumerate(values):
-        x = (index / (len(values) - 1)) * width if len(values) > 1 else width / 2
-        normalized = (value - min_val) / span
-        y = height - (normalized * height)
-        points.append(f"{x:.1f},{y:.1f}")
-    return " ".join(points)
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -73,20 +60,12 @@ def root() -> RedirectResponse:
 def dashboard(request: Request):
     metrics = latest_metrics()
     history = recent_metrics()
-    cpu_points = _build_sparkline_points([row["cpu_temp"] for row in history])
-    ambient_points = _build_sparkline_points([row["ambient_temp"] for row in history])
-    fan_points = _build_sparkline_points([row["fan_rpm"] for row in history])
-    pump_points = _build_sparkline_points([row["pump_percent"] for row in history])
     fans = list_fans(active_only=True)
     return templates.TemplateResponse(
         "dashboard.html",
         {
             "request": request,
             "metrics": metrics,
-            "cpu_points": cpu_points,
-            "ambient_points": ambient_points,
-            "fan_points": fan_points,
-            "pump_points": pump_points,
             "fans": fans,
         },
     )
@@ -230,6 +209,11 @@ def ingest_metrics(
 @app.get("/api/metrics/latest")
 def get_latest_metrics():
     return JSONResponse(latest_metrics() or {})
+
+
+@app.get("/api/metrics/recent")
+def get_recent_metrics(limit: int = 24):
+    return JSONResponse(recent_metrics(limit=limit))
 
 
 def _load_profiles():

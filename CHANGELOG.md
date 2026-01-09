@@ -23,3 +23,4 @@
 - Mount VideoCore devices into the container for `vcgencmd`.
 - Add build log entry for missing `/dev/vchiq`.
 - Auto-refresh dashboard metrics every 2 seconds.
+- Replace multiple sparklines with a single multi-line chart and axis grid.

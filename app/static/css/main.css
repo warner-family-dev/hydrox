@@ -308,6 +308,50 @@ body {
   accent-color: var(--accent);
 }
 
+.trend {
+  position: relative;
+  margin-top: 6px;
+}
+
+.trend__chart {
+  width: 100%;
+  height: 240px;
+  background: rgba(10, 16, 24, 0.6);
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  padding: 6px;
+}
+
+.trend__grid line {
+  stroke: rgba(120, 140, 170, 0.18);
+  stroke-width: 1;
+}
+
+.trend__axes line {
+  stroke: rgba(180, 200, 230, 0.45);
+  stroke-width: 1.2;
+}
+
+.trend__axis {
+  position: absolute;
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.trend__axis--y {
+  top: 18px;
+  left: -6px;
+  transform: rotate(-90deg);
+  transform-origin: left top;
+}
+
+.trend__axis--x {
+  bottom: -6px;
+  right: 16px;
+}
+
 .form {
   display: flex;
   flex-direction: column;
