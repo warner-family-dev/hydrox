@@ -62,4 +62,15 @@ def init_db() -> None:
             )
             """
         )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS fan_channels (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                channel_index INTEGER NOT NULL UNIQUE,
+                name TEXT NOT NULL,
+                default_name TEXT NOT NULL,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
         conn.commit()

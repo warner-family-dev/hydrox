@@ -4,8 +4,9 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from app.db import get_connection, init_db
+from app.services.fans import list_fans, seed_fans_if_empty, update_fan_name
 from app.services.git_info import get_git_status
-from app.services.metrics import insert_metrics, latest_metrics, seed_metrics_if_empty
+from app.services.metrics import insert_metrics, latest_metrics, recent_metrics, seed_metrics_if_empty
 
 app = FastAPI(title="Hydrox Command Center")
 
@@ -18,6 +19,22 @@ templates = Jinja2Templates(directory="app/templates")
 def startup() -> None:
     init_db()
     seed_metrics_if_empty()
+    seed_fans_if_empty()
+
+
+def _build_sparkline_points(values: list[float], width: int = 140, height: int = 40) -> str:
+    if not values:
+        return ""
+    min_val = min(values)
+    max_val = max(values)
+    span = max(max_val - min_val, 0.01)
+    points = []
+    for index, value in enumerate(values):
+        x = (index / (len(values) - 1)) * width if len(values) > 1 else width / 2
+        normalized = (value - min_val) / span
+        y = height - (normalized * height)
+        points.append(f"{x:.1f},{y:.1f}")
+    return " ".join(points)
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -28,11 +45,16 @@ def root() -> RedirectResponse:
 @app.get("/dashboard", response_class=HTMLResponse)
 def dashboard(request: Request):
     metrics = latest_metrics()
+    history = recent_metrics()
+    cpu_points = _build_sparkline_points([row["cpu_temp"] for row in history])
+    ambient_points = _build_sparkline_points([row["ambient_temp"] for row in history])
     return templates.TemplateResponse(
         "dashboard.html",
         {
             "request": request,
             "metrics": metrics,
+            "cpu_points": cpu_points,
+            "ambient_points": ambient_points,
         },
     )
 
@@ -127,6 +149,24 @@ def admin(request: Request):
             "commit_date": commit_date,
         },
     )
+
+
+@app.get("/settings", response_class=HTMLResponse)
+def settings(request: Request):
+    fans = list_fans()
+    return templates.TemplateResponse(
+        "settings.html",
+        {
+            "request": request,
+            "fans": fans,
+        },
+    )
+
+
+@app.post("/settings/fans")
+def rename_fan(fan_id: int = Form(...), name: str = Form(...)):
+    update_fan_name(fan_id, name)
+    return RedirectResponse("/settings", status_code=303)
 
 
 @app.post("/api/metrics/ingest")

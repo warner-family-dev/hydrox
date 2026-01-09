@@ -3,7 +3,7 @@
 <section class="hero">
   <div>
     <h1>Profile Creator</h1>
-    <p class="lead">Draft fan and pump curves, then assign schedules and conditions. Profiles never auto-apply.</p>
+    <p class="lead">Draft per-channel fan and pump curves, then assign cron rules and weekday windows. Profiles never auto-apply.</p>
   </div>
 </section>
 
@@ -17,11 +17,11 @@
       <label class="form__label">Profile Name</label>
       <input class="form__input" type="text" name="name" placeholder="Cellar Quiet Curve" required />
 
-      <label class="form__label">Curve JSON</label>
-      <textarea class="form__textarea" name="curve_json" rows="6" placeholder='[{"temp": 18, "fan": 30}, {"temp": 22, "fan": 55}]' required></textarea>
+      <label class="form__label">Curve JSON (per fan channel)</label>
+      <textarea class="form__textarea" name="curve_json" rows="6" placeholder='{"fan_1": [{"temp": 18, "fan": 30}, {"temp": 22, "fan": 55}], "fan_2": [{"temp": 18, "fan": 28}]}' required></textarea>
 
-      <label class="form__label">Schedule JSON (optional)</label>
-      <textarea class="form__textarea" name="schedule_json" rows="4" placeholder='{"days": ["Mon", "Wed"], "start": "18:00", "end": "06:00"}'></textarea>
+      <label class="form__label">Schedule JSON (cron + window, optional)</label>
+      <textarea class="form__textarea" name="schedule_json" rows="5" placeholder='{"cron": "0 18 * * *", "window": {"days": ["Mon", "Wed"], "start": "18:00", "end": "06:00"}}'></textarea>
 
       <button class="button" type="submit">Save Profile</button>
     </form>

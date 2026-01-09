@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+  <div>
+    <h1>Settings</h1>
+    <p class="lead">Rename fan channels before applying profiles. Defaults mirror the OCTO labels.</p>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="panel__header">
+    <h2>Fan Channels</h2>
+    <span class="panel__tag">Rename</span>
+  </div>
+  <div class="settings-list">
+    {% for fan in fans %}
+    <form class="settings-row" method="post" action="/settings/fans">
+      <input type="hidden" name="fan_id" value="{{ fan.id }}" />
+      <div class="settings-row__label">Channel {{ fan.channel_index }}</div>
+      <div class="settings-row__meta">Default: {{ fan.default_name }}</div>
+      <input class="form__input" type="text" name="name" value="{{ fan.name }}" required />
+      <button class="button button--ghost" type="submit">Update</button>
+    </form>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

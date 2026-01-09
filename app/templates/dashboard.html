@@ -53,14 +53,22 @@
   </div>
   <div class="panel">
     <div class="panel__header">
-      <h2>Telemetry Notes</h2>
-      <span class="panel__tag">Staged</span>
+      <h2>Temperature Trend</h2>
+      <span class="panel__tag">Last 12 samples</span>
     </div>
-    <ul class="notes">
-      <li>Liquidctl ingestion will populate fan RPMs and pump curves.</li>
-      <li>SQLite stores metric snapshots for graphing.</li>
-      <li>Profiles are created first, then applied manually or scheduled.</li>
-    </ul>
+    <div class="sparkline">
+      <div class="sparkline__label">CPU Temp</div>
+      <svg viewBox="0 0 140 40" class="sparkline__chart" aria-hidden="true">
+        <polyline points="{{ cpu_points }}" fill="none" stroke="var(--accent)" stroke-width="2" />
+      </svg>
+    </div>
+    <div class="sparkline">
+      <div class="sparkline__label">Ambient Temp</div>
+      <svg viewBox="0 0 140 40" class="sparkline__chart" aria-hidden="true">
+        <polyline points="{{ ambient_points }}" fill="none" stroke="var(--alert)" stroke-width="2" />
+      </svg>
+    </div>
+    <div class="sparkline__note">Historical samples are seeded until ingestion is wired in.</div>
   </div>
 </section>
 {% endblock %}
