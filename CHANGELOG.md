@@ -15,3 +15,4 @@
 - Install git in the container so Admin can read branch and commit metadata.
 - Add `.dockerignore` to exclude logs, env files, and local artifacts.
 - Add `.gitignore` for logs, env files, and local artifacts.
+- Sample CPU temp via `vcgencmd` in a background thread.

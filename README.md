@@ -52,6 +52,7 @@ The service listens on `http://localhost:8000`.
 - Admin metadata falls back to `unknown` when git is unavailable in the container.
 - `.dockerignore` excludes logs, env files, and local dev artifacts.
 - `.gitignore` keeps logs, env files, and local dev artifacts out of version control.
+- CPU temperature is sampled every 5 seconds via `vcgencmd measure_temp` and stored in SQLite.
 
 ## Logging
 

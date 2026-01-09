@@ -1,4 +1,6 @@
 import json
+import threading
+import time
 
 from fastapi import FastAPI, Form, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
@@ -8,7 +10,14 @@ from fastapi.templating import Jinja2Templates
 from app.db import get_connection, init_db
 from app.services.fans import list_fans, seed_fans_if_empty, sync_fan_count, update_fan_name
 from app.services.git_info import get_git_status
-from app.services.metrics import insert_metrics, latest_metrics, recent_metrics, seed_metrics_if_empty
+from app.services.metrics import (
+    DEFAULT_METRICS,
+    insert_metrics,
+    latest_metrics,
+    read_cpu_temp_vcgencmd,
+    recent_metrics,
+    seed_metrics_if_empty,
+)
 from app.services.settings import get_fan_count, seed_settings_if_empty, set_fan_count
 
 app = FastAPI(title="Hydrox Command Center")
@@ -24,6 +33,20 @@ def startup() -> None:
     seed_settings_if_empty()
     seed_metrics_if_empty()
     seed_fans_if_empty()
+    thread = threading.Thread(target=_cpu_sampler, daemon=True)
+    thread.start()
+
+
+def _cpu_sampler() -> None:
+    while True:
+        cpu_temp = read_cpu_temp_vcgencmd()
+        if cpu_temp is not None:
+            latest = latest_metrics() or {}
+            ambient_temp = latest.get("ambient_temp", DEFAULT_METRICS["ambient_temp"])
+            fan_rpm = latest.get("fan_rpm", DEFAULT_METRICS["fan_rpm"])
+            pump_percent = latest.get("pump_percent", DEFAULT_METRICS["pump_percent"])
+            insert_metrics(cpu_temp, ambient_temp, fan_rpm, pump_percent)
+        time.sleep(5)
 
 
 def _build_sparkline_points(values: list[float], width: int = 140, height: int = 40) -> str:

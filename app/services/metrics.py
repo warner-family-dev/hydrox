@@ -1,3 +1,6 @@
+import subprocess
+from typing import Optional
+
 from app.db import get_connection
 
 
@@ -74,3 +77,25 @@ def insert_metrics(cpu_temp: float, ambient_temp: float, fan_rpm: int, pump_perc
             (cpu_temp, ambient_temp, fan_rpm, pump_percent),
         )
         conn.commit()
+
+
+def read_cpu_temp_vcgencmd() -> Optional[float]:
+    try:
+        result = subprocess.run(
+            ["vcgencmd", "measure_temp"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except FileNotFoundError:
+        return None
+    if result.returncode != 0:
+        return None
+    raw = result.stdout.strip()
+    if "=" not in raw:
+        return None
+    value = raw.split("=", 1)[1].replace("'C", "").strip()
+    try:
+        return float(value)
+    except ValueError:
+        return None
