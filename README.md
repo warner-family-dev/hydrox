@@ -48,7 +48,6 @@ Environment variables (via `docker-compose.yml`):
 - Build logs: `logs/builds/docker-compose-buildlog.log`
 - Use `scripts/docker-build-log.py` to capture timestamped build output
 - Wi-Fi strength reads from `/proc/net/wireless`; missing interfaces are logged to `hydrox.log`
-- Admin status values auto-refresh every 5 seconds.
 
 ## Hardware notes
 
