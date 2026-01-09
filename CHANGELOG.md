@@ -32,3 +32,4 @@
 - Map app logs to `./logs` and remove the extra `./log` folder.
 - Add build log wrapper script and set TZ to America/Chicago.
 - Install build tooling during image build for `smbus` (liquidctl).
+- Keep build tooling installed to allow `smbus` to compile during `pip install`.
