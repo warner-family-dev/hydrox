@@ -36,3 +36,4 @@
 - Log unhandled exceptions to `/logs/hydrox.log` with local timestamps.
 - Consolidate build logs into `docker-compose-buildlog.log`.
 - Run the container with configured `PUID` and `PGID`.
+- Mount the correct host `liquidctl` binary path.
