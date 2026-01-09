@@ -3,6 +3,7 @@
 ## v0.0.2 - January 9, 2026
 
 - Add Wi-Fi signal gauge to the admin status table and remove duplicate disk row.
+- Rewrite README to focus on usage, setup, and requirements.
 
 ## v0.0.1 - January 8, 2026
 
