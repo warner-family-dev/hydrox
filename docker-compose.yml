@@ -18,6 +18,9 @@ services:
       - HYDROX_LIQUIDCTL_PATH=/usr/bin/liquidctl
       - HYDROX_LOG_PATH=/logs/hydrox.log
       - TZ=America/Chicago
+      - PUID=1000
+      - PGID=1003
+    user: "1000:1003"
 
 volumes:
   hydrox_data:

@@ -4,7 +4,7 @@ This project keeps a simple, auditable logging flow while the platform is still 
 
 ## Build logs
 
-- Store build output in `logs/builds/docker-compose-buildlog.log`.
+- Store build output in `logs/builds/docker-compose-buildlog.log` (single file).
 - Run `scripts/docker-build-log.py` to append a timestamped record of `docker compose up -d --build`.
 - Each line is prepended with a local timestamp (TZ defaults to `America/Chicago`).
 

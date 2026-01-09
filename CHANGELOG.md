@@ -34,3 +34,5 @@
 - Install build tooling during image build for `smbus` (liquidctl).
 - Keep build tooling installed to allow `smbus` to compile during `pip install`.
 - Log unhandled exceptions to `/logs/hydrox.log` with local timestamps.
+- Consolidate build logs into `docker-compose-buildlog.log`.
+- Run the container with configured `PUID` and `PGID`.

@@ -50,6 +50,7 @@ Build logs append to `logs/builds/docker-compose-buildlog.log`.
 - The container runs as a non-root user and writes SQLite data to `/data`.
 - Compose now uses a named volume for `/data` to avoid host permission issues.
 - App logs are written to `/logs/hydrox.log` (mapped to `./logs` on the host).
+- The container user is pinned with `PUID`/`PGID` (see `docker-compose.yml`).
 
 ## Configuration
 
