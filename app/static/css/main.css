@@ -332,6 +332,12 @@ body {
   stroke-width: 1.2;
 }
 
+.trend__labels text {
+  fill: rgba(220, 230, 245, 0.6);
+  font-size: 10px;
+  font-family: "IBM Plex Mono", "Courier New", monospace;
+}
+
 .trend__axis {
   position: absolute;
   color: var(--muted);

@@ -65,20 +65,13 @@
         <input type="checkbox" data-target="ambient-line" checked />
         <span>Ambient</span>
       </label>
-      <label class="toggle">
-        <input type="checkbox" data-target="fan-line" checked />
-        <span>Fan RPM</span>
-      </label>
-      <label class="toggle">
-        <input type="checkbox" data-target="pump-line" checked />
-        <span>Pump %</span>
-      </label>
     </div>
     <div class="trend">
-      <div class="trend__axis trend__axis--y">Normalized scale (0-100)</div>
+      <div class="trend__axis trend__axis--y">Temperature (°C)</div>
       <div class="trend__axis trend__axis--x">Samples (oldest → newest)</div>
       <svg viewBox="0 0 520 240" class="trend__chart" aria-hidden="true">
         <g class="trend__grid" id="trend-grid"></g>
+        <g class="trend__labels" id="trend-labels"></g>
         <g class="trend__axes">
           <line x1="40" y1="20" x2="40" y2="210" />
           <line x1="40" y1="210" x2="500" y2="210" />
@@ -86,8 +79,6 @@
         <g class="trend__lines">
           <polyline id="cpu-line" fill="none" stroke="var(--accent)" stroke-width="2" />
           <polyline id="ambient-line" fill="none" stroke="var(--alert)" stroke-width="2" />
-          <polyline id="fan-line" fill="none" stroke="#22c55e" stroke-width="2" />
-          <polyline id="pump-line" fill="none" stroke="#f97316" stroke-width="2" />
         </g>
       </svg>
     </div>

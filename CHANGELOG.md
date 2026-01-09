@@ -24,3 +24,4 @@
 - Add build log entry for missing `/dev/vchiq`.
 - Auto-refresh dashboard metrics every 2 seconds.
 - Replace multiple sparklines with a single multi-line chart and axis grid.
+- Plot CPU and ambient temperature only with auto-scaled grid labels.

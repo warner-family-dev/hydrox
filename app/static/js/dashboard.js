@@ -1,7 +1,8 @@
 const toggles = document.querySelectorAll('.toggle input');
 const metricEls = document.querySelectorAll('[data-metric]');
-const lineIds = ['cpu-line', 'ambient-line', 'fan-line', 'pump-line'];
+const lineIds = ['cpu-line', 'ambient-line'];
 const grid = document.getElementById('trend-grid');
+const labels = document.getElementById('trend-labels');
 
 const metricFormatters = {
   cpu_temp: (value) => `${value}°C`,
@@ -20,38 +21,17 @@ const setMetricValue = (el, value) => {
   el.textContent = formatted;
 };
 
-const drawGrid = () => {
-  if (!grid) {
-    return;
-  }
-  const lines = [];
-  for (let i = 0; i <= 4; i += 1) {
-    const y = 20 + (190 / 4) * i;
-    lines.push(`<line x1="40" y1="${y}" x2="500" y2="${y}" />`);
-  }
-  for (let i = 0; i <= 5; i += 1) {
-    const x = 40 + (460 / 5) * i;
-    lines.push(`<line x1="${x}" y1="20" x2="${x}" y2="210" />`);
-  }
-  grid.innerHTML = lines.join('');
-};
-
-const normalizeSeries = (series) => {
-  const min = Math.min(...series);
-  const max = Math.max(...series);
-  const span = Math.max(max - min, 0.01);
-  return series.map((value) => ((value - min) / span) * 100);
-};
-
-const buildPoints = (series) => {
+const buildPoints = (series, min, max) => {
   const left = 40;
   const top = 20;
   const width = 460;
   const height = 190;
+  const span = Math.max(max - min, 0.1);
   const points = [];
   series.forEach((value, index) => {
     const x = left + (index / (series.length - 1)) * width;
-    const y = top + height - (value / 100) * height;
+    const normalized = (value - min) / span;
+    const y = top + height - normalized * height;
     points.push(`${x.toFixed(1)},${y.toFixed(1)}`);
   });
   return points.join(' ');
@@ -86,26 +66,53 @@ const refreshTrend = async () => {
     if (!Array.isArray(data) || data.length < 2) {
       return;
     }
-    const cpu = normalizeSeries(data.map((row) => row.cpu_temp));
-    const ambient = normalizeSeries(data.map((row) => row.ambient_temp));
-    const fan = normalizeSeries(data.map((row) => row.fan_rpm));
-    const pump = normalizeSeries(data.map((row) => row.pump_percent));
+    const cpu = data.map((row) => row.cpu_temp);
+    const ambient = data.map((row) => row.ambient_temp);
+    const allTemps = cpu.concat(ambient);
+    const min = Math.min(...allTemps);
+    const max = Math.max(...allTemps);
+    const padding = Math.max((max - min) * 0.1, 0.5);
+    const rangeMin = min - padding;
+    const rangeMax = max + padding;
     const seriesMap = {
       'cpu-line': cpu,
       'ambient-line': ambient,
-      'fan-line': fan,
-      'pump-line': pump,
     };
+    drawGrid(rangeMin, rangeMax);
     lineIds.forEach((id) => {
       const line = document.getElementById(id);
       if (!line) {
         return;
       }
-      line.setAttribute('points', buildPoints(seriesMap[id]));
+      line.setAttribute('points', buildPoints(seriesMap[id], rangeMin, rangeMax));
     });
   } catch (error) {
     // Ignore transient fetch failures.
   }
+};
+
+const drawGrid = (min, max) => {
+  if (!grid || !labels) {
+    return;
+  }
+  const lines = [];
+  const labelEls = [];
+  const ySteps = 5;
+  const xSteps = 6;
+  for (let i = 0; i <= ySteps; i += 1) {
+    const y = 20 + (190 / ySteps) * i;
+    lines.push(`<line x1="40" y1="${y}" x2="500" y2="${y}" />`);
+    const value = max - ((max - min) / ySteps) * i;
+    labelEls.push(
+      `<text x="30" y="${y + 4}" text-anchor="end">${value.toFixed(1)}</text>`
+    );
+  }
+  for (let i = 0; i <= xSteps; i += 1) {
+    const x = 40 + (460 / xSteps) * i;
+    lines.push(`<line x1="${x}" y1="20" x2="${x}" y2="210" />`);
+  }
+  grid.innerHTML = lines.join('');
+  labels.innerHTML = labelEls.join('');
 };
 
 toggles.forEach((toggle) => {
@@ -121,7 +128,6 @@ toggles.forEach((toggle) => {
   });
 });
 
-drawGrid();
 refreshMetrics();
 refreshTrend();
 setInterval(() => {
