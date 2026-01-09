@@ -33,3 +33,4 @@
 - Add build log wrapper script and set TZ to America/Chicago.
 - Install build tooling during image build for `smbus` (liquidctl).
 - Keep build tooling installed to allow `smbus` to compile during `pip install`.
+- Log unhandled exceptions to `/logs/hydrox.log` with local timestamps.

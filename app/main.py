@@ -42,6 +42,15 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 templates = Jinja2Templates(directory="app/templates")
 
 
+@app.middleware("http")
+async def log_exceptions(request: Request, call_next):
+    try:
+        return await call_next(request)
+    except Exception:
+        get_logger().exception("unhandled exception on %s %s", request.method, request.url.path)
+        raise
+
+
 @app.on_event("startup")
 def startup() -> None:
     init_db()
