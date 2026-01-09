@@ -51,6 +51,7 @@ Build logs append to `logs/builds/docker-compose-buildlog.log`.
 - Compose now uses a named volume for `/data` to avoid host permission issues.
 - App logs are written to `/logs/hydrox.log` (mapped to `./logs` on the host).
 - The container runs as root to access hardware while preserving file permissions via `PUID`/`PGID`.
+- The container runs in `privileged` mode to access USB devices like the Octo.
 
 ## Configuration
 
