@@ -65,7 +65,7 @@ Build logs append to `logs/builds/docker-compose-buildlog.log`.
 - Liquidctl integration is shipped in the image (builder stage).
 - Profiles are created first, then applied manually or via schedules.
 - Fan curves are stored per fan channel in the profile JSON and validated on save.
-- Admin metadata falls back to `unknown` when git is unavailable in the container.
+- Admin metadata falls back to `unknown` when git metadata is unavailable in the container.
 - `.dockerignore` excludes logs, env files, and local dev artifacts.
 - `.gitignore` keeps logs, env files, and local dev artifacts out of version control.
 - CPU temperature is sampled every 5 seconds via `vcgencmd measure_temp` and stored in SQLite.

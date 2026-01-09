@@ -8,10 +8,11 @@ GIT_DIR_ENV = "HYDROX_GIT_DIR"
 
 def _run_git(args: list[str]) -> str:
     git_dir = os.getenv(GIT_DIR_ENV)
-    cmd = ["git"] + args
+    cmd = ["git"]
     env = os.environ.copy()
     if git_dir:
         cmd.extend(["--git-dir", git_dir])
+    cmd.extend(args)
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, check=False)
     except FileNotFoundError:

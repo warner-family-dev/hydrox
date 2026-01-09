@@ -50,3 +50,4 @@
 - Fix duplicate `devices` entry in docker-compose.
 - Run container in privileged mode for USB access.
 - Treat CPU fan RPM 0 as valid and reduce missing-path log spam.
+- Fix git command ordering so branch metadata resolves.
