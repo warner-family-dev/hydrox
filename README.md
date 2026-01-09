@@ -71,6 +71,7 @@ Build logs append to `logs/builds/docker-compose-buildlog.log`.
 - CPU temperature is sampled every 5 seconds via `vcgencmd measure_temp` and stored in SQLite.
 - Dashboard metrics auto-refresh every 2 seconds via the metrics API, with a single temperature trend chart.
 - Fan output chart uses max RPM values from Settings calibration or manual entry.
+- CPU fan RPM reads return 0 when idle; missing sysfs paths log once per boot.
 
 ## Logging
 

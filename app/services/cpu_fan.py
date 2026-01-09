@@ -11,8 +11,7 @@ def read_cpu_fan_rpm() -> Optional[int]:
             with open(path, "r", encoding="utf-8") as handle:
                 raw = handle.read().strip()
             value = int(raw)
-            if value > 0:
-                return value
+            return value
         except (OSError, ValueError):
             continue
     return None

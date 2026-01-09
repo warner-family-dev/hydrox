@@ -37,6 +37,8 @@ from app.services.settings import (
 
 app = FastAPI(title="Hydrox Command Center")
 
+_cpu_fan_missing_logged = False
+
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 templates = Jinja2Templates(directory="app/templates")
@@ -86,6 +88,7 @@ def _cpu_sampler() -> None:
 
 def _fan_sampler() -> None:
     logger = get_logger()
+    global _cpu_fan_missing_logged
     while True:
         rpms = get_fan_rpms()
         for channel_index, rpm in rpms.items():
@@ -93,8 +96,11 @@ def _fan_sampler() -> None:
         cpu_rpm = read_cpu_fan_rpm()
         if cpu_rpm is not None:
             insert_cpu_fan_reading(cpu_rpm)
+            _cpu_fan_missing_logged = False
         else:
-            logger.error("cpu fan rpm not found in sysfs")
+            if not _cpu_fan_missing_logged:
+                logger.error("cpu fan rpm not found in sysfs")
+                _cpu_fan_missing_logged = True
         time.sleep(5)
 
 

@@ -49,3 +49,4 @@
 - Pass `/dev/bus/usb` into the container for liquidctl device access.
 - Fix duplicate `devices` entry in docker-compose.
 - Run container in privileged mode for USB access.
+- Treat CPU fan RPM 0 as valid and reduce missing-path log spam.
