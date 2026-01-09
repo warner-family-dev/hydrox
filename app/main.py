@@ -8,8 +8,17 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from app.db import get_connection, init_db
-from app.services.fans import list_fans, seed_fans_if_empty, sync_fan_count, update_fan_name
+from app.services.cpu_fan import read_cpu_fan_rpm
+from app.services.fan_metrics import (
+    insert_cpu_fan_reading,
+    insert_fan_reading,
+    recent_cpu_fan_readings,
+    recent_fan_readings,
+)
+from app.services.fans import list_fans, seed_fans_if_empty, sync_fan_count, update_fan_settings
 from app.services.git_info import get_git_status
+from app.services.liquidctl import get_fan_rpms, set_fan_speed
+from app.services.logger import get_logger
 from app.services.metrics import (
     DEFAULT_METRICS,
     insert_metrics,
@@ -18,7 +27,13 @@ from app.services.metrics import (
     recent_metrics,
     seed_metrics_if_empty,
 )
-from app.services.settings import get_fan_count, seed_settings_if_empty, set_fan_count
+from app.services.settings import (
+    get_active_profile_id,
+    get_fan_count,
+    seed_settings_if_empty,
+    set_active_profile_id,
+    set_fan_count,
+)
 
 app = FastAPI(title="Hydrox Command Center")
 
@@ -33,8 +48,10 @@ def startup() -> None:
     seed_settings_if_empty()
     seed_metrics_if_empty()
     seed_fans_if_empty()
-    thread = threading.Thread(target=_cpu_sampler, daemon=True)
-    thread.start()
+    cpu_thread = threading.Thread(target=_cpu_sampler, daemon=True)
+    cpu_thread.start()
+    fan_thread = threading.Thread(target=_fan_sampler, daemon=True)
+    fan_thread.start()
 
 
 def _cpu_sampler() -> None:
@@ -49,6 +66,18 @@ def _cpu_sampler() -> None:
         time.sleep(5)
 
 
+def _fan_sampler() -> None:
+    logger = get_logger()
+    while True:
+        rpms = get_fan_rpms()
+        for channel_index, rpm in rpms.items():
+            insert_fan_reading(channel_index, rpm)
+        cpu_rpm = read_cpu_fan_rpm()
+        if cpu_rpm is not None:
+            insert_cpu_fan_reading(cpu_rpm)
+        else:
+            logger.error("cpu fan rpm not found in sysfs")
+        time.sleep(5)
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -59,7 +88,6 @@ def root() -> RedirectResponse:
 @app.get("/dashboard", response_class=HTMLResponse)
 def dashboard(request: Request):
     metrics = latest_metrics()
-    history = recent_metrics()
     fans = list_fans(active_only=True)
     return templates.TemplateResponse(
         "dashboard.html",
@@ -74,11 +102,13 @@ def dashboard(request: Request):
 @app.get("/profiles", response_class=HTMLResponse)
 def profiles(request: Request):
     rows = _load_profiles()
+    active_profile_id = get_active_profile_id()
     return templates.TemplateResponse(
         "profiles.html",
         {
             "request": request,
             "profiles": [dict(row) for row in rows],
+            "active_profile_id": active_profile_id,
             "error": None,
         },
     )
@@ -93,11 +123,13 @@ def create_profile(
     error = _validate_profile_json(curve_json, schedule_json)
     if error:
         rows = _load_profiles()
+        active_profile_id = get_active_profile_id()
         return templates.TemplateResponse(
             "profiles.html",
             {
                 "request": request,
                 "profiles": [dict(row) for row in rows],
+                "active_profile_id": active_profile_id,
                 "error": error,
             },
         )
@@ -110,6 +142,12 @@ def create_profile(
             (name, curve_json, schedule_json or None),
         )
         conn.commit()
+    return RedirectResponse("/profiles", status_code=303)
+
+
+@app.post("/profiles/apply")
+def apply_profile(profile_id: int = Form(...)):
+    set_active_profile_id(profile_id)
     return RedirectResponse("/profiles", status_code=303)
 
 
@@ -183,8 +221,14 @@ def settings(request: Request):
 
 
 @app.post("/settings/fans")
-def rename_fan(fan_id: int = Form(...), name: str = Form(...)):
-    update_fan_name(fan_id, name)
+def update_fan(fan_id: int = Form(...), name: str = Form(...), max_rpm: str | None = Form(None)):
+    parsed_rpm = None
+    if max_rpm:
+        try:
+            parsed_rpm = int(max_rpm)
+        except ValueError:
+            parsed_rpm = None
+    update_fan_settings(fan_id, name, parsed_rpm)
     return RedirectResponse("/settings", status_code=303)
 
 
@@ -192,6 +236,23 @@ def rename_fan(fan_id: int = Form(...), name: str = Form(...)):
 def update_fan_count(fan_count: int = Form(...)):
     set_fan_count(fan_count)
     sync_fan_count(get_fan_count())
+    return RedirectResponse("/settings", status_code=303)
+
+
+@app.post("/settings/fans/calibrate")
+def calibrate_fans():
+    logger = get_logger()
+    fans = list_fans(active_only=True)
+    for fan in fans:
+        set_fan_speed(fan["channel_index"], 100)
+    time.sleep(15)
+    rpms = get_fan_rpms()
+    if not rpms:
+        logger.error("no fan rpms found during calibration")
+    for channel_index, rpm in rpms.items():
+        _update_fan_max_rpm(channel_index, rpm)
+    _restore_after_calibration(fans)
+    logger.info("fan calibration completed")
     return RedirectResponse("/settings", status_code=303)
 
 
@@ -216,6 +277,24 @@ def get_recent_metrics(limit: int = 24):
     return JSONResponse(recent_metrics(limit=limit))
 
 
+@app.get("/api/fans/percent")
+def get_fan_percent(limit: int = 24):
+    fans = list_fans(active_only=True)
+    max_rpm_map = {fan["channel_index"]: fan["max_rpm"] for fan in fans if fan["max_rpm"]}
+    fan_series = _fan_series_from_readings(limit, max_rpm_map)
+    cpu_series = _cpu_fan_series(limit, max_rpm=8000)
+    pump_series = _pump_series(limit)
+    return JSONResponse(
+        {
+            "series": {
+                **fan_series,
+                "cpu_fan": cpu_series,
+                "pump": pump_series,
+            }
+        }
+    )
+
+
 def _load_profiles():
     with get_connection() as conn:
         rows = conn.execute(
@@ -226,6 +305,108 @@ def _load_profiles():
             """
         ).fetchall()
         return rows
+
+
+def _update_fan_max_rpm(channel_index: int, rpm: int) -> None:
+    from app.services.fans import update_fan_max_rpm
+
+    update_fan_max_rpm(channel_index, rpm)
+
+
+def _restore_after_calibration(fans: list[dict]) -> None:
+    logger = get_logger()
+    active_profile_id = get_active_profile_id()
+    if active_profile_id is None:
+        for fan in fans:
+            set_fan_speed(fan["channel_index"], 20)
+        return
+    profile = _load_profile(active_profile_id)
+    if not profile:
+        logger.error("active profile %s not found, defaulting to 20%%", active_profile_id)
+        for fan in fans:
+            set_fan_speed(fan["channel_index"], 20)
+        return
+    cpu_temp = read_cpu_temp_vcgencmd()
+    if cpu_temp is None:
+        logger.error("cpu temp unavailable, defaulting to 20%%")
+        for fan in fans:
+            set_fan_speed(fan["channel_index"], 20)
+        return
+    speeds = _fan_speeds_from_profile(profile["curve_json"], cpu_temp, fans)
+    for fan in fans:
+        speed = speeds.get(fan["channel_index"], 20)
+        set_fan_speed(fan["channel_index"], speed)
+
+
+def _load_profile(profile_id: int):
+    with get_connection() as conn:
+        row = conn.execute(
+            """
+            SELECT id, name, curve_json
+            FROM profiles
+            WHERE id = ?
+            """,
+            (profile_id,),
+        ).fetchone()
+        return dict(row) if row else None
+
+
+def _fan_speeds_from_profile(curve_json: str, temp: float, fans: list[dict]) -> dict[int, int]:
+    logger = get_logger()
+    try:
+        curve = json.loads(curve_json)
+    except json.JSONDecodeError:
+        logger.error("invalid profile curve json")
+        return {}
+    speeds = {}
+    for fan in fans:
+        key = f"fan_{fan['channel_index']}"
+        points = curve.get(key)
+        if not points:
+            continue
+        points = sorted(points, key=lambda item: item["temp"])
+        speeds[fan["channel_index"]] = int(_interpolate(points, temp))
+    return speeds
+
+
+def _interpolate(points: list[dict], temp: float) -> float:
+    if temp <= points[0]["temp"]:
+        return points[0]["fan"]
+    if temp >= points[-1]["temp"]:
+        return points[-1]["fan"]
+    for lower, upper in zip(points, points[1:]):
+        if lower["temp"] <= temp <= upper["temp"]:
+            span = upper["temp"] - lower["temp"]
+            if span <= 0:
+                return lower["fan"]
+            ratio = (temp - lower["temp"]) / span
+            return lower["fan"] + ratio * (upper["fan"] - lower["fan"])
+    return points[-1]["fan"]
+
+
+def _fan_series_from_readings(limit: int, max_rpm_map: dict[int, int]) -> dict[str, list[float]]:
+    readings = recent_fan_readings(limit)
+    grouped: dict[int, list[int]] = {}
+    for row in reversed(readings):
+        grouped.setdefault(row["channel_index"], []).append(row["rpm"])
+    series: dict[str, list[float]] = {}
+    for channel_index, max_rpm in max_rpm_map.items():
+        rpms = grouped.get(channel_index, [])[-limit:]
+        if not rpms:
+            continue
+        series[f"fan_{channel_index}"] = [min((rpm / max_rpm) * 100, 100) for rpm in rpms]
+    return series
+
+
+def _cpu_fan_series(limit: int, max_rpm: int) -> list[float]:
+    readings = recent_cpu_fan_readings(limit)
+    rpms = [row["rpm"] for row in reversed(readings)]
+    return [min((rpm / max_rpm) * 100, 100) for rpm in rpms]
+
+
+def _pump_series(limit: int) -> list[float]:
+    rows = recent_metrics(limit=limit)
+    return [row["pump_percent"] for row in rows]
 
 
 def _validate_profile_json(curve_json: str, schedule_json: str) -> str | None:

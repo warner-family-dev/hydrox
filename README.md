@@ -5,6 +5,7 @@ Hydrox is a Raspberry Pi 5 command center for a wine cellar. It provides a web d
 ## Features
 
 - Dashboard for CPU temp, ambient temp, fan RPM, and pump output with toggleable trend lines
+- Fan output chart with per-fan calibration and max RPM tracking
 - Profile Creator for staged fan/pump curves and schedules
 - Screen Updater for three OLED panels with templates, font settings, and rotation timing
 - Settings page for renaming fan channels and setting the active fan count
@@ -38,15 +39,18 @@ The service listens on `http://localhost:8000`.
 - The compose file omits the legacy `version` key (Compose v2+ ignores it).
 - The container runs as a non-root user and writes SQLite data to `/data`.
 - Compose now uses a named volume for `/data` to avoid host permission issues.
+- App logs are written to `/logs/hydrox.log` (mapped to `./log` on the host).
 
 ## Configuration
 
 - `HYDROX_DB_PATH`: SQLite database path (default: `/data/hydrox.db`)
 - `HYDROX_GIT_DIR`: Path to the repo `.git` directory for Admin metadata
+- `HYDROX_LIQUIDCTL_PATH`: Path to the host `liquidctl` binary (default: `/usr/bin/liquidctl`)
+- `HYDROX_LOG_PATH`: Path to the app log file (default: `/logs/hydrox.log`)
 
 ## Notes
 
-- Liquidctl integration is staged and will be wired in as host-accessible commands.
+- Liquidctl integration is wired to the host binary mounted into the container.
 - Profiles are created first, then applied manually or via schedules.
 - Fan curves are stored per fan channel in the profile JSON and validated on save.
 - Admin metadata falls back to `unknown` when git is unavailable in the container.
@@ -54,6 +58,7 @@ The service listens on `http://localhost:8000`.
 - `.gitignore` keeps logs, env files, and local dev artifacts out of version control.
 - CPU temperature is sampled every 5 seconds via `vcgencmd measure_temp` and stored in SQLite.
 - Dashboard metrics auto-refresh every 2 seconds via the metrics API, with a single temperature trend chart.
+- Fan output chart uses max RPM values from Settings calibration or manual entry.
 
 ## Logging
 
@@ -61,6 +66,7 @@ The service listens on `http://localhost:8000`.
 - Build logs include the local datetime of the run.
 - Build logs record early failures such as missing packages.
 - Runtime logs are kept in Docker for now (use `docker compose logs -f`).
+- App runtime errors and permission issues are written to `/logs/hydrox.log`.
 - See `docs/logging.md` for the full plan.
 
 ## Raspberry Pi tooling
@@ -68,3 +74,4 @@ The service listens on `http://localhost:8000`.
 - The Docker image enables `vcgencmd` by adding the Raspberry Pi apt repo and installing `libraspberrypi-bin`.
 - The container needs access to the VideoCore device for `vcgencmd` (`/dev/vcio` on Pi 5).
 - If `/dev/vcio` is missing, create it on the host: `sudo mknod /dev/vcio c 100 0` and ensure Docker can access it.
+- The app calls host `liquidctl` via `/usr/bin/liquidctl` mounted into the container.

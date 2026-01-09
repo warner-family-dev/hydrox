@@ -70,6 +70,26 @@ def init_db() -> None:
                 name TEXT NOT NULL,
                 default_name TEXT NOT NULL,
                 active INTEGER NOT NULL DEFAULT 1,
+                max_rpm INTEGER,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS fan_readings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                channel_index INTEGER NOT NULL,
+                rpm INTEGER NOT NULL,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS cpu_fan_readings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                rpm INTEGER NOT NULL,
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP
             )
             """
@@ -85,6 +105,7 @@ def init_db() -> None:
             """
         )
         _ensure_column(conn, "fan_channels", "active", "INTEGER NOT NULL DEFAULT 1")
+        _ensure_column(conn, "fan_channels", "max_rpm", "INTEGER")
         conn.commit()
 
 

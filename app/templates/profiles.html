@@ -38,12 +38,21 @@
       {% if profiles %}
         {% for profile in profiles %}
         <div class="list__item">
-          <div class="list__title">{{ profile.name }}</div>
+          <div class="list__title">
+            {{ profile.name }}
+            {% if active_profile_id == profile.id %}
+            <span class="list__badge">Active</span>
+            {% endif %}
+          </div>
           <div class="list__meta">{{ profile.created_at }}</div>
           <div class="list__body">Curve: {{ profile.curve_json }}</div>
           {% if profile.schedule_json %}
           <div class="list__body">Schedule: {{ profile.schedule_json }}</div>
           {% endif %}
+          <form method="post" action="/profiles/apply">
+            <input type="hidden" name="profile_id" value="{{ profile.id }}" />
+            <button class="button button--ghost" type="submit">Apply Profile</button>
+          </form>
         </div>
         {% endfor %}
       {% else %}

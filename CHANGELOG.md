@@ -25,3 +25,7 @@
 - Auto-refresh dashboard metrics every 2 seconds.
 - Replace multiple sparklines with a single multi-line chart and axis grid.
 - Plot CPU and ambient temperature only with auto-scaled grid labels.
+- Add fan output chart with toggles and calibrated max RPM support.
+- Add fan calibration workflow and active profile apply setting.
+- Mount host `liquidctl` and CPU fan sysfs paths into the container.
+- Log hardware and permission errors to `/logs/hydrox.log`.

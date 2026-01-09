@@ -1,6 +1,7 @@
 from app.db import get_connection
 
 FAN_COUNT_KEY = "fan_count"
+ACTIVE_PROFILE_KEY = "active_profile_id"
 DEFAULT_FAN_COUNT = 7
 
 
@@ -53,3 +54,20 @@ def get_fan_count() -> int:
 
 def set_fan_count(count: int) -> None:
     set_setting(FAN_COUNT_KEY, str(max(1, count)))
+
+
+def get_active_profile_id() -> int | None:
+    value = get_setting(ACTIVE_PROFILE_KEY)
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def set_active_profile_id(profile_id: int | None) -> None:
+    if profile_id is None:
+        set_setting(ACTIVE_PROFILE_KEY, "")
+        return
+    set_setting(ACTIVE_PROFILE_KEY, str(profile_id))

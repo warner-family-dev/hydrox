@@ -56,7 +56,7 @@ def list_fans(active_only: bool = False):
         if active_only:
             rows = conn.execute(
                 """
-                SELECT id, channel_index, name, default_name, active
+                SELECT id, channel_index, name, default_name, active, max_rpm
                 FROM fan_channels
                 WHERE active = 1
                 ORDER BY channel_index ASC
@@ -65,7 +65,7 @@ def list_fans(active_only: bool = False):
         else:
             rows = conn.execute(
                 """
-                SELECT id, channel_index, name, default_name, active
+                SELECT id, channel_index, name, default_name, active, max_rpm
                 FROM fan_channels
                 ORDER BY channel_index ASC
                 """
@@ -73,15 +73,15 @@ def list_fans(active_only: bool = False):
         return [dict(row) for row in rows]
 
 
-def update_fan_name(fan_id: int, name: str) -> None:
+def update_fan_settings(fan_id: int, name: str, max_rpm: int | None) -> None:
     with get_connection() as conn:
         conn.execute(
             """
             UPDATE fan_channels
-            SET name = ?
+            SET name = ?, max_rpm = ?
             WHERE id = ?
             """,
-            (name, fan_id),
+            (name, max_rpm, fan_id),
         )
         conn.commit()
 
@@ -89,3 +89,16 @@ def update_fan_name(fan_id: int, name: str) -> None:
 def sync_fan_count(fan_count: int) -> None:
     with get_connection() as conn:
         _sync_fan_count(conn, fan_count)
+
+
+def update_fan_max_rpm(channel_index: int, max_rpm: int) -> None:
+    with get_connection() as conn:
+        conn.execute(
+            """
+            UPDATE fan_channels
+            SET max_rpm = ?
+            WHERE channel_index = ?
+            """,
+            (max_rpm, channel_index),
+        )
+        conn.commit()

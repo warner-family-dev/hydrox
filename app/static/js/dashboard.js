@@ -3,6 +3,10 @@ const metricEls = document.querySelectorAll('[data-metric]');
 const lineIds = ['cpu-line', 'ambient-line'];
 const grid = document.getElementById('trend-grid');
 const labels = document.getElementById('trend-labels');
+const fanGrid = document.getElementById('fan-grid');
+const fanLabels = document.getElementById('fan-labels');
+
+const fanPalette = ['#38bdf8', '#818cf8', '#f472b6', '#22c55e', '#eab308', '#f97316', '#a855f7'];
 
 const metricFormatters = {
   cpu_temp: (value) => `${value}°C`,
@@ -115,6 +119,67 @@ const drawGrid = (min, max) => {
   labels.innerHTML = labelEls.join('');
 };
 
+const drawFanGrid = () => {
+  if (!fanGrid || !fanLabels) {
+    return;
+  }
+  const lines = [];
+  const labelEls = [];
+  const ySteps = 5;
+  const xSteps = 6;
+  for (let i = 0; i <= ySteps; i += 1) {
+    const y = 20 + (190 / ySteps) * i;
+    lines.push(`<line x1="40" y1="${y}" x2="500" y2="${y}" />`);
+    const value = 100 - (100 / ySteps) * i;
+    labelEls.push(`<text x="30" y="${y + 4}" text-anchor="end">${value.toFixed(0)}</text>`);
+  }
+  for (let i = 0; i <= xSteps; i += 1) {
+    const x = 40 + (460 / xSteps) * i;
+    lines.push(`<line x1="${x}" y1="20" x2="${x}" y2="210" />`);
+  }
+  fanGrid.innerHTML = lines.join('');
+  fanLabels.innerHTML = labelEls.join('');
+};
+
+const refreshFanChart = async () => {
+  try {
+    const response = await fetch('/api/fans/percent?limit=24', { cache: 'no-store' });
+    if (!response.ok) {
+      return;
+    }
+    const data = await response.json();
+    const series = data.series || {};
+    const fanLines = Array.from(document.querySelectorAll('[id^="fan-"][id$="-line"]'));
+    fanLines.forEach((line) => {
+      const id = line.getAttribute('id');
+      const key = id ? id.replace('-', '_').replace('-line', '') : '';
+      const values = series[key];
+      if (!values || values.length < 2) {
+        line.setAttribute('points', '');
+        return;
+      }
+      line.setAttribute('points', buildPoints(values, 0, 100));
+    });
+
+    const cpuLine = document.getElementById('cpu-fan-line');
+    if (cpuLine) {
+      const cpuSeries = series.cpu_fan;
+      if (cpuSeries && cpuSeries.length > 1) {
+        cpuLine.setAttribute('points', buildPoints(cpuSeries, 0, 100));
+      }
+    }
+    const pumpLine = document.getElementById('pump-line');
+    if (pumpLine) {
+      const pumpSeries = series.pump;
+      if (pumpSeries && pumpSeries.length > 1) {
+        pumpLine.setAttribute('points', buildPoints(pumpSeries, 0, 100));
+      }
+    }
+  } catch (error) {
+    // Ignore transient fetch failures.
+  }
+};
+
 toggles.forEach((toggle) => {
   toggle.addEventListener('change', (event) => {
     const targetId = event.target.getAttribute('data-target');
@@ -128,9 +193,20 @@ toggles.forEach((toggle) => {
   });
 });
 
+const applyFanPalette = () => {
+  const fanLines = Array.from(document.querySelectorAll('[id^="fan-"][id$="-line"]'));
+  fanLines.forEach((line, index) => {
+    line.setAttribute('stroke', fanPalette[index % fanPalette.length]);
+  });
+};
+
+applyFanPalette();
+drawFanGrid();
 refreshMetrics();
 refreshTrend();
+refreshFanChart();
 setInterval(() => {
   refreshMetrics();
   refreshTrend();
+  refreshFanChart();
 }, 2000);

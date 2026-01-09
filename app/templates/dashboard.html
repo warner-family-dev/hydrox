@@ -85,5 +85,48 @@
     <div class="sparkline__note">Historical samples are seeded until ingestion is wired in.</div>
   </div>
 </section>
+
+<section class="panel">
+  <div class="panel__header">
+    <h2>Fan Output</h2>
+    <span class="panel__tag">Percent of max RPM</span>
+  </div>
+  <div class="sparkline__toggles">
+    {% for fan in fans %}
+    <label class="toggle {% if not fan.max_rpm %}toggle--disabled{% endif %}" {% if not fan.max_rpm %}title="Unable to determine fan max RPM - Please calibrate in settings"{% endif %}>
+      <input type="checkbox" data-target="fan-{{ fan.channel_index }}-line" {% if not fan.max_rpm %}disabled{% endif %} {% if fan.max_rpm %}checked{% endif %} />
+      <span>{{ fan.name }}</span>
+    </label>
+    {% endfor %}
+    <label class="toggle" title="CPU fan max RPM is fixed at 8000">
+      <input type="checkbox" data-target="cpu-fan-line" checked />
+      <span>CPU Fan</span>
+    </label>
+    <label class="toggle">
+      <input type="checkbox" data-target="pump-line" checked />
+      <span>Pump</span>
+    </label>
+  </div>
+  <div class="trend">
+    <div class="trend__axis trend__axis--y">Output (%)</div>
+    <div class="trend__axis trend__axis--x">Samples (oldest → newest)</div>
+    <svg viewBox="0 0 520 240" class="trend__chart" aria-hidden="true">
+      <g class="trend__grid" id="fan-grid"></g>
+      <g class="trend__labels" id="fan-labels"></g>
+      <g class="trend__axes">
+        <line x1="40" y1="20" x2="40" y2="210" />
+        <line x1="40" y1="210" x2="500" y2="210" />
+      </g>
+      <g class="trend__lines">
+        {% for fan in fans %}
+        <polyline id="fan-{{ fan.channel_index }}-line" fill="none" stroke="var(--accent)" stroke-width="2" />
+        {% endfor %}
+        <polyline id="cpu-fan-line" fill="none" stroke="#22c55e" stroke-width="2" />
+        <polyline id="pump-line" fill="none" stroke="#f97316" stroke-width="2" />
+      </g>
+    </svg>
+  </div>
+  <div class="sparkline__note">Fan lines require max RPM values from calibration or manual entry.</div>
+</section>
 <script src="/static/js/dashboard.js"></script>
 {% endblock %}
