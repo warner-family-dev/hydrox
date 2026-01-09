@@ -139,24 +139,37 @@ def get_wifi_strength(interface: str = "wlan0") -> dict:
 def _read_wifi_strength(interface: str = "wlan0") -> dict:
     logger = get_logger()
     desired = os.getenv("HYDROX_WIFI_INTERFACE", interface)
-    try:
-        result = subprocess.run(
-            ["iw", "dev", desired, "link"],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-    except FileNotFoundError:
-        _log_wifi_once("_wifi_proc_missing_logged", "wifi strength unavailable: iw not installed")
+    result = _run_iw_link(desired)
+    if result is None:
         return {"label": "unknown", "percent": None, "interface": desired}
     if result.returncode != 0:
-        _log_wifi_once(
-            "_wifi_missing_logged",
-            "wifi strength unavailable: iw dev %s link failed: %s",
-            desired,
-            result.stderr.strip() or result.stdout.strip(),
-        )
-        return {"label": "unknown", "percent": None, "interface": desired}
+        fallback = _detect_wifi_interface()
+        if fallback and fallback != desired:
+            _log_wifi_once(
+                "_wifi_missing_logged",
+                "wifi strength unavailable: iw dev %s link failed (%s); using %s",
+                desired,
+                result.stderr.strip() or result.stdout.strip(),
+                fallback,
+            )
+            desired = fallback
+            result = _run_iw_link(desired)
+            if result is None or result.returncode != 0:
+                _log_wifi_once(
+                    "_wifi_missing_logged",
+                    "wifi strength unavailable: iw dev %s link failed: %s",
+                    desired,
+                    (result.stderr.strip() if result else "no output"),
+                )
+                return {"label": "unknown", "percent": None, "interface": desired}
+        else:
+            _log_wifi_once(
+                "_wifi_missing_logged",
+                "wifi strength unavailable: iw dev %s link failed: %s",
+                desired,
+                result.stderr.strip() or result.stdout.strip(),
+            )
+            return {"label": "unknown", "percent": None, "interface": desired}
     signal_dbm = _parse_iw_signal(result.stdout)
     if signal_dbm is None:
         _log_wifi_once("_wifi_parse_logged", "wifi strength parse error: signal not found for %s", desired)
@@ -196,6 +209,43 @@ def _log_wifi_once(flag_name: str, message: str, *args: object) -> None:
         _wifi_parse_logged = True
     elif flag_name == "_wifi_missing_logged":
         _wifi_missing_logged = True
+
+
+def _run_iw_link(interface: str):
+    try:
+        return subprocess.run(
+            ["iw", "dev", interface, "link"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except FileNotFoundError:
+        _log_wifi_once("_wifi_proc_missing_logged", "wifi strength unavailable: iw not installed")
+        return None
+
+
+def _detect_wifi_interface() -> str | None:
+    result = _run_iw_list()
+    if result is None or result.returncode != 0:
+        return None
+    for line in result.stdout.splitlines():
+        line = line.strip()
+        if line.startswith("Interface "):
+            return line.split("Interface ", 1)[1].strip()
+    return None
+
+
+def _run_iw_list():
+    try:
+        return subprocess.run(
+            ["iw", "dev"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except FileNotFoundError:
+        _log_wifi_once("_wifi_proc_missing_logged", "wifi strength unavailable: iw not installed")
+        return None
 
 
 def _parse_iw_signal(output: str) -> int | None:
