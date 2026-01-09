@@ -55,6 +55,21 @@
       <td>{{ status.disk_data }}</td>
     </tr>
     <tr>
+      <th>Wi-Fi (wlan0)</th>
+      <td>
+        {% if status.wifi.percent is not none %}
+        <div class="wifi-meter">
+          <div class="wifi-meter__bar">
+            <div class="wifi-meter__fill" style="width: {{ status.wifi.percent }}%;"></div>
+          </div>
+          <div class="wifi-meter__label">{{ status.wifi.percent }}% ({{ status.wifi.label }})</div>
+        </div>
+        {% else %}
+        <span>unknown</span>
+        {% endif %}
+      </td>
+    </tr>
+    <tr>
       <th>Liquidctl</th>
       <td>{{ status.liquidctl }}</td>
     </tr>

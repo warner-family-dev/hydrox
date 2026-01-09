@@ -121,6 +121,39 @@ def _format_duration(total_seconds: int) -> str:
     return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
 
 
+def get_wifi_strength(interface: str = "wlan0") -> dict:
+    try:
+        lines = _read_proc("/proc/net/wireless").splitlines()[2:]
+    except OSError:
+        return {"label": "unknown", "percent": None}
+    for line in lines:
+        if not line.strip():
+            continue
+        name, data = line.split(":", 1)
+        if name.strip() != interface:
+            continue
+        parts = data.split()
+        if len(parts) < 2:
+            break
+        try:
+            link = float(parts[1])
+        except ValueError:
+            break
+        percent = int(max(0, min(100, round(link / 70 * 100))))
+        return {"label": _wifi_label(percent), "percent": percent}
+    return {"label": "unknown", "percent": None}
+
+
+def _wifi_label(percent: int) -> str:
+    if percent < 25:
+        return "Poor"
+    if percent < 50:
+        return "OK"
+    if percent < 75:
+        return "Good"
+    return "Excellent"
+
+
 def get_status_payload() -> dict:
     return {
         "status": "Ok",
@@ -128,7 +161,7 @@ def get_status_payload() -> dict:
         "image_uptime": get_image_uptime(),
         "cpu": get_cpu_usage(),
         "memory": get_memory_usage(),
-        "disk_root": get_disk_usage("/"),
         "disk_data": get_disk_usage("/data"),
         "liquidctl": get_liquidctl_status(),
+        "wifi": get_wifi_strength(),
     }
