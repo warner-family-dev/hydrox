@@ -13,6 +13,7 @@
 - Auto-detect Wi-Fi interface when `wlan0` is missing.
 - Revert Wi-Fi detection to host `/proc/net/wireless` bind-mount.
 - Add sysfs Wi-Fi fallback via `/sys/class/net`.
+- Add wpa_cli signal polling via `/run/wpa_supplicant`.
 - Rewrite README to focus on usage, setup, and requirements.
 
 ## v0.0.1 - January 8, 2026

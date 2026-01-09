@@ -1,5 +1,6 @@
 import os
 import shutil
+import subprocess
 import time
 from pathlib import Path
 
@@ -137,8 +138,11 @@ def get_wifi_strength(interface: str = "wlan0") -> dict:
 
 def _read_wifi_strength(interface: str = "wlan0") -> dict:
     logger = get_logger()
-    proc_path = os.getenv("HYDROX_WIFI_PROC_PATH", "/proc/net/wireless")
     desired = os.getenv("HYDROX_WIFI_INTERFACE", interface)
+    wpa_result = _read_wpa_signal(desired)
+    if wpa_result is not None:
+        return wpa_result
+    proc_path = os.getenv("HYDROX_WIFI_PROC_PATH", "/proc/net/wireless")
     sysfs_result = _read_sysfs_wifi(desired)
     if sysfs_result is not None:
         return sysfs_result
@@ -204,15 +208,18 @@ _wifi_proc_missing_logged = False
 _wifi_parse_logged = False
 _wifi_missing_logged = False
 _wifi_sys_missing_logged = False
+_wifi_wpa_missing_logged = False
 
 
 def _log_wifi_once(flag_name: str, message: str, *args: object) -> None:
     global _wifi_proc_missing_logged, _wifi_parse_logged, _wifi_missing_logged, _wifi_sys_missing_logged
+    global _wifi_wpa_missing_logged
     flags = {
         "_wifi_proc_missing_logged": _wifi_proc_missing_logged,
         "_wifi_parse_logged": _wifi_parse_logged,
         "_wifi_missing_logged": _wifi_missing_logged,
         "_wifi_sys_missing_logged": _wifi_sys_missing_logged,
+        "_wifi_wpa_missing_logged": _wifi_wpa_missing_logged,
     }
     if flags.get(flag_name):
         return
@@ -225,6 +232,8 @@ def _log_wifi_once(flag_name: str, message: str, *args: object) -> None:
         _wifi_missing_logged = True
     elif flag_name == "_wifi_sys_missing_logged":
         _wifi_sys_missing_logged = True
+    elif flag_name == "_wifi_wpa_missing_logged":
+        _wifi_wpa_missing_logged = True
 
 
 def _read_sysfs_wifi(interface: str) -> dict | None:
@@ -256,6 +265,48 @@ def _read_sysfs_wifi(interface: str) -> dict | None:
         return None
     percent = int(max(0, min(100, round(link_value / 70 * 100))))
     return {"label": _wifi_label(percent), "percent": percent, "interface": interface}
+
+
+def _read_wpa_signal(interface: str) -> dict | None:
+    socket_path = os.getenv("HYDROX_WIFI_WPA_PATH", "/host-run/wpa_supplicant")
+    try:
+        result = subprocess.run(
+            ["wpa_cli", "-p", socket_path, "-i", interface, "signal_poll"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except FileNotFoundError:
+        _log_wifi_once("_wifi_wpa_missing_logged", "wifi strength unavailable: wpa_cli not installed")
+        return None
+    if result.returncode != 0:
+        _log_wifi_once(
+            "_wifi_wpa_missing_logged",
+            "wifi strength unavailable: wpa_cli failed for %s: %s",
+            interface,
+            result.stderr.strip() or result.stdout.strip(),
+        )
+        return None
+    rssi = _parse_wpa_signal(result.stdout)
+    if rssi is None:
+        _log_wifi_once(
+            "_wifi_parse_logged",
+            "wifi strength parse error: wpa_cli missing RSSI for %s",
+            interface,
+        )
+        return None
+    percent = _signal_to_percent(rssi)
+    return {"label": _wifi_label(percent), "percent": percent, "interface": interface}
+
+
+def _parse_wpa_signal(output: str) -> int | None:
+    for line in output.splitlines():
+        if line.startswith("RSSI="):
+            try:
+                return int(line.split("=", 1)[1].strip())
+            except ValueError:
+                return None
+    return None
 
 
 def _parse_iw_signal(output: str) -> int | None:

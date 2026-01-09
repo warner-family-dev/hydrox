@@ -10,6 +10,7 @@ services:
       - ./.git:/.git:ro
       - ./logs:/logs
       - /proc/net/wireless:/host-proc/net/wireless:ro
+      - /run/wpa_supplicant:/host-run/wpa_supplicant:ro
       - /sys/class/net:/host-sys/class/net:ro
       - /sys/devices/platform/cooling_fan:/sys/devices/platform/cooling_fan:ro
       - /sys/class/hwmon:/sys/class/hwmon:ro
@@ -21,6 +22,7 @@ services:
       - HYDROX_GIT_DIR=/.git
       - HYDROX_LOG_PATH=/logs/hydrox.log
       - HYDROX_WIFI_PROC_PATH=/host-proc/net/wireless
+      - HYDROX_WIFI_WPA_PATH=/host-run/wpa_supplicant
       - HYDROX_WIFI_SYS_PATH=/host-sys/class/net
       - HYDROX_WIFI_INTERFACE=wlan0
       - TZ=America/Chicago
