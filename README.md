@@ -37,6 +37,7 @@ The service listens on `http://localhost:8000`.
 
 - The compose file omits the legacy `version` key (Compose v2+ ignores it).
 - The container runs as a non-root user and writes SQLite data to `/data`.
+- Compose now uses a named volume for `/data` to avoid host permission issues.
 
 ## Configuration
 
@@ -48,3 +49,9 @@ The service listens on `http://localhost:8000`.
 - Liquidctl integration is staged and will be wired in as host-accessible commands.
 - Profiles are created first, then applied manually or via schedules.
 - Fan curves are stored per fan channel in the profile JSON and validated on save.
+
+## Logging
+
+- Build logs are stored in `logs/builds/`.
+- Runtime logs are kept in Docker for now (use `docker compose logs -f`).
+- See `docs/logging.md` for the full plan.

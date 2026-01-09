@@ -9,3 +9,5 @@
 - Add configurable fan count controls and chart line toggles.
 - Validate per-fan curve JSON and cron/window schedules on save.
 - Remove legacy compose file version key for Docker Compose v2.
+- Switch `/data` to a named volume to avoid host permission issues.
+- Add logging strategy docs and initial build log entry.
