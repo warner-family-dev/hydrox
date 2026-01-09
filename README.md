@@ -56,12 +56,12 @@ Build logs append to `logs/builds/docker-compose-buildlog.log`.
 
 - `HYDROX_DB_PATH`: SQLite database path (default: `/data/hydrox.db`)
 - `HYDROX_GIT_DIR`: Path to the repo `.git` directory for Admin metadata
-- `HYDROX_LIQUIDCTL_PATH`: Path to the host `liquidctl` binary (default: `/usr/bin/liquidctl`)
+- `HYDROX_LIQUIDCTL_PATH`: Optional path override for `liquidctl` (default: `/root/.local/bin/liquidctl`)
 - `HYDROX_LOG_PATH`: Path to the app log file (default: `/logs/hydrox.log`)
 
 ## Notes
 
-- Liquidctl integration is wired to the host binary mounted into the container.
+- Liquidctl integration is shipped in the image (builder stage).
 - Profiles are created first, then applied manually or via schedules.
 - Fan curves are stored per fan channel in the profile JSON and validated on save.
 - Admin metadata falls back to `unknown` when git is unavailable in the container.
@@ -86,4 +86,4 @@ Build logs append to `logs/builds/docker-compose-buildlog.log`.
 - The image keeps build tooling installed so `smbus` can compile during `liquidctl` installation.
 - The container needs access to the VideoCore device for `vcgencmd` (`/dev/vcio` on Pi 5).
 - If `/dev/vcio` is missing, create it on the host: `sudo mknod /dev/vcio c 100 0` and ensure Docker can access it.
-- The app calls host `liquidctl` via `/home/pi/.local/share/pipx/venvs/liquidctl/bin/liquidctl` (mounted from pipx), falling back to `/usr/local/bin/liquidctl` in the container.
+- The image installs `liquidctl` in a builder stage and ships it at `/root/.local/bin/liquidctl`.

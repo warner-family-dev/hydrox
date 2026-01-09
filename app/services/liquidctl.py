@@ -6,12 +6,12 @@ from typing import Dict, Tuple
 from app.services.logger import get_logger
 
 LIQUIDCTL_PATH_ENV = "HYDROX_LIQUIDCTL_PATH"
-DEFAULT_LIQUIDCTL_PATH = "/usr/bin/liquidctl"
+DEFAULT_LIQUIDCTL_PATH = "/root/.local/bin/liquidctl"
 
 
 def _candidate_paths() -> list[str]:
     env_path = os.getenv(LIQUIDCTL_PATH_ENV, DEFAULT_LIQUIDCTL_PATH)
-    paths = [env_path, "/usr/local/bin/liquidctl", "/usr/bin/liquidctl"]
+    paths = [env_path, "/root/.local/bin/liquidctl", "/usr/local/bin/liquidctl", "/usr/bin/liquidctl"]
     deduped = []
     for path in paths:
         if path and path not in deduped:
