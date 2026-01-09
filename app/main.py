@@ -245,6 +245,11 @@ def admin(request: Request):
     )
 
 
+@app.get("/api/admin/status")
+def admin_status():
+    return JSONResponse(get_status_payload())
+
+
 @app.get("/settings", response_class=HTMLResponse)
 def settings(request: Request):
     fans = list_fans()
