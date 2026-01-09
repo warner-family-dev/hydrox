@@ -1,5 +1,12 @@
 ### Changelog
 
+## v0.0.3 - January 9, 2026
+
+- Add OLED publish flow with luma.oled and PCA9548A channel selection.
+- Add font dropdown with bundled DejaVu and Liberation fonts for OLED rendering.
+- Add Publish button to send a saved screen to OLED 1-3.
+- Mount `/dev/i2c-1` for OLED access.
+
 ## v0.0.2 - January 9, 2026
 
 - Add Wi-Fi signal gauge to the admin status table and remove duplicate disk row.

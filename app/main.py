@@ -22,6 +22,7 @@ from app.services.metrics import (
     recent_metrics,
     seed_metrics_if_empty,
 )
+from app.services.oled import ScreenPayload, list_font_choices, list_oled_channels, publish_screen
 from app.services.sensors import (
     format_temp,
     latest_sensor_readings,
@@ -188,6 +189,8 @@ def screens(request: Request):
         {
             "request": request,
             "screens": [dict(row) for row in rows],
+            "fonts": list_font_choices(),
+            "oled_channels": list_oled_channels(),
         },
     )
 
@@ -196,7 +199,7 @@ def screens(request: Request):
 def create_screen(
     name: str = Form(...),
     message_template: str = Form(...),
-    font_family: str = Form("IBM Plex Mono"),
+    font_family: str = Form("DejaVu Sans Mono"),
     font_size: int = Form(12),
     rotation_seconds: int = Form(15),
     tag: str = Form(""),
@@ -211,6 +214,28 @@ def create_screen(
             (name, message_template, font_family, font_size, rotation_seconds, tag or None),
         )
         conn.commit()
+    return RedirectResponse("/screens", status_code=303)
+
+
+@app.post("/screens/publish")
+def publish_screen_to_oled(screen_id: int = Form(...), oled_channel: int = Form(...)):
+    with get_connection() as conn:
+        row = conn.execute(
+            """
+            SELECT message_template, font_family, font_size
+            FROM screens
+            WHERE id = ?
+            """,
+            (screen_id,),
+        ).fetchone()
+    if not row:
+        return RedirectResponse("/screens", status_code=303)
+    payload = ScreenPayload(
+        message=row["message_template"],
+        font_key=row["font_family"],
+        font_size=row["font_size"],
+    )
+    publish_screen(payload, int(oled_channel))
     return RedirectResponse("/screens", status_code=303)
 
 

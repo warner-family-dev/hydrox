@@ -21,7 +21,11 @@
       <input class="form__input" type="text" name="message_template" placeholder="Ambient: {{ambient_temp}}°C" required />
 
       <label class="form__label">Font Family</label>
-      <input class="form__input" type="text" name="font_family" value="IBM Plex Mono" required />
+      <select class="form__input" name="font_family" required>
+        {% for font in fonts %}
+        <option value="{{ font.key }}" {% if font.key == 'DejaVu Sans Mono' %}selected{% endif %}>{{ font.label }}</option>
+        {% endfor %}
+      </select>
 
       <label class="form__label">Font Size</label>
       <input class="form__input" type="number" name="font_size" value="12" min="8" max="32" required />
@@ -52,6 +56,15 @@
           {% if screen.tag %}
           <div class="list__body">Tag: {{ screen.tag }}</div>
           {% endif %}
+          <form class="list__actions" method="post" action="/screens/publish">
+            <input type="hidden" name="screen_id" value="{{ screen.id }}" />
+            <select class="form__input" name="oled_channel" required>
+              {% for oled in oled_channels %}
+              <option value="{{ oled.channel }}">{{ oled.label }}</option>
+              {% endfor %}
+            </select>
+            <button class="button button--ghost" type="submit">Publish</button>
+          </form>
         </div>
         {% endfor %}
       {% else %}

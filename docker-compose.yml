@@ -18,6 +18,7 @@ services:
     devices:
       - /dev/bus/usb:/dev/bus/usb
       - /dev/vcio:/dev/vcio
+      - /dev/i2c-1:/dev/i2c-1
     environment:
       - HYDROX_DB_PATH=/data/hydrox.db
       - HYDROX_GIT_DIR=/.git
