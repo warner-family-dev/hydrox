@@ -1,6 +1,7 @@
 import os
 import subprocess
 from datetime import datetime
+from zoneinfo import ZoneInfo
 from typing import Tuple
 
 GIT_DIR_ENV = "HYDROX_GIT_DIR"
@@ -27,7 +28,9 @@ def get_git_status() -> Tuple[str, str]:
     commit_date = _run_git(["show", "-s", "--format=%cI", "HEAD"])
     if commit_date:
         try:
-            commit_date = datetime.fromisoformat(commit_date.replace("Z", "+00:00")).isoformat()
+            dt = datetime.fromisoformat(commit_date.replace("Z", "+00:00"))
+            tzinfo = ZoneInfo("America/Chicago")
+            commit_date = dt.astimezone(tzinfo).strftime("%Y-%m-%d %H:%M:%S %Z")
         except ValueError:
             pass
     return (branch or "unknown"), (commit_date or "unknown")

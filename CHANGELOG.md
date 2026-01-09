@@ -52,3 +52,4 @@
 - Treat CPU fan RPM 0 as valid and reduce missing-path log spam.
 - Fix git command ordering so branch metadata resolves.
 - Add calibration countdown modal and dashboard fan RPM updates.
+- Format admin commit date using local CPT timestamp.
