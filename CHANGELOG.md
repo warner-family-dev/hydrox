@@ -57,3 +57,4 @@
 - Extend calibration countdown and make it dynamic until restore completes.
 - Add chart legends and hover tooltips.
 - Add admin status table with uptime, memory usage, and liquidctl connection.
+- Expand admin status table with CPU load, disk usage, RAM percent, and image uptime.

@@ -9,7 +9,7 @@ Hydrox is a Raspberry Pi 5 command center for a wine cellar. It provides a web d
 - Profile Creator for staged fan/pump curves and schedules
 - Screen Updater for three OLED panels with templates, font settings, and rotation timing
 - Settings page for renaming fan channels and setting the active fan count
-- Admin page showing git metadata plus uptime, memory usage, and liquidctl status
+- Admin page showing git metadata plus uptime, CPU load, memory usage, disk usage, and liquidctl status
 
 ## Stack
 

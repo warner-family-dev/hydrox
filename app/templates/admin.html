@@ -31,12 +31,28 @@
       <td class="status-cell"><span class="status-dot status-dot--ok"></span>{{ status.status }}</td>
     </tr>
     <tr>
-      <th>Uptime</th>
-      <td>{{ status.uptime }}</td>
+      <th>Host Uptime</th>
+      <td>{{ status.host_uptime }}</td>
     </tr>
     <tr>
-      <th>Memory Usage</th>
+      <th>Image Uptime</th>
+      <td>{{ status.image_uptime }}</td>
+    </tr>
+    <tr>
+      <th>CPU Load</th>
+      <td>{{ status.cpu }}</td>
+    </tr>
+    <tr>
+      <th>RAM Usage</th>
       <td>{{ status.memory }}</td>
+    </tr>
+    <tr>
+      <th>Disk /</th>
+      <td>{{ status.disk_root }}</td>
+    </tr>
+    <tr>
+      <th>Disk /data</th>
+      <td>{{ status.disk_data }}</td>
     </tr>
     <tr>
       <th>Liquidctl</th>

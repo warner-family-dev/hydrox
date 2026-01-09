@@ -35,7 +35,7 @@ from app.services.settings import (
     set_active_profile_id,
     set_fan_count,
 )
-from app.services.system_status import get_status_payload
+from app.services.system_status import get_status_payload, set_image_start_time
 
 app = FastAPI(title="Hydrox Command Center")
 
@@ -67,6 +67,7 @@ async def log_exceptions(request: Request, call_next):
 
 @app.on_event("startup")
 def startup() -> None:
+    set_image_start_time(time.time())
     init_db()
     seed_settings_if_empty()
     seed_metrics_if_empty()
