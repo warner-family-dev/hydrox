@@ -5,6 +5,7 @@
 - Add Wi-Fi signal gauge to the admin status table and remove duplicate disk row.
 - Log Wi-Fi signal read failures to `hydrox.log`.
 - Auto-refresh admin status metrics every 5 seconds.
+- Add Wi-Fi interface fallback and log missing interface once per boot.
 - Rewrite README to focus on usage, setup, and requirements.
 
 ## v0.0.1 - January 8, 2026

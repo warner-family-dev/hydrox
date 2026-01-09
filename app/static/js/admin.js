@@ -41,6 +41,7 @@ const refreshStatus = async () => {
     updateText("memory", data.memory ?? "unknown");
     updateText("disk_data", data.disk_data ?? "unknown");
     updateText("liquidctl", data.liquidctl ?? "unknown");
+    updateText("wifi_interface", data.wifi?.interface ?? "wlan0");
     renderWifi(data.wifi);
   } catch (err) {
     // Silent: avoid spam on transient API failures.

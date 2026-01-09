@@ -51,7 +51,7 @@
       <td data-admin-field="disk_data">{{ status.disk_data }}</td>
     </tr>
     <tr>
-      <th>Wi-Fi (wlan0)</th>
+      <th>Wi-Fi (<span data-admin-field="wifi_interface">{{ status.wifi.interface or "wlan0" }}</span>)</th>
       <td data-admin-field="wifi">
         {% if status.wifi.percent is not none %}
         <div class="wifi-meter">

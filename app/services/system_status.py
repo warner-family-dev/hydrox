@@ -1,3 +1,4 @@
+import os
 import shutil
 import time
 from pathlib import Path
@@ -124,30 +125,49 @@ def _format_duration(total_seconds: int) -> str:
 
 def get_wifi_strength(interface: str = "wlan0") -> dict:
     logger = get_logger()
+    desired = os.getenv("HYDROX_WIFI_INTERFACE", interface)
     try:
         lines = _read_proc("/proc/net/wireless").splitlines()[2:]
     except OSError:
-        logger.error("wifi strength unavailable: /proc/net/wireless not readable")
-        return {"label": "unknown", "percent": None}
+        _log_wifi_once("_wifi_proc_missing_logged", "wifi strength unavailable: /proc/net/wireless not readable")
+        return {"label": "unknown", "percent": None, "interface": desired}
+    entries: dict[str, float] = {}
     for line in lines:
         if not line.strip():
             continue
         name, data = line.split(":", 1)
-        if name.strip() != interface:
-            continue
         parts = data.split()
         if len(parts) < 2:
-            logger.error("wifi strength parse error: missing link value for %s", interface)
-            break
+            _log_wifi_once(
+                "_wifi_parse_logged",
+                "wifi strength parse error: missing link value for %s",
+                name.strip(),
+            )
+            continue
         try:
             link = float(parts[1])
         except ValueError:
-            logger.error("wifi strength parse error: non-numeric link value for %s", interface)
-            break
-        percent = int(max(0, min(100, round(link / 70 * 100))))
-        return {"label": _wifi_label(percent), "percent": percent}
-    logger.error("wifi strength unavailable: interface %s not found", interface)
-    return {"label": "unknown", "percent": None}
+            _log_wifi_once(
+                "_wifi_parse_logged",
+                "wifi strength parse error: non-numeric link value for %s",
+                name.strip(),
+            )
+            continue
+        entries[name.strip()] = link
+    if not entries:
+        _log_wifi_once("_wifi_parse_logged", "wifi strength unavailable: no wireless interfaces found")
+        return {"label": "unknown", "percent": None, "interface": desired}
+    if desired not in entries:
+        fallback = next(iter(entries.keys()))
+        _log_wifi_once(
+            "_wifi_missing_logged",
+            "wifi strength unavailable: interface %s not found; using %s",
+            desired,
+            fallback,
+        )
+        desired = fallback
+    percent = int(max(0, min(100, round(entries[desired] / 70 * 100))))
+    return {"label": _wifi_label(percent), "percent": percent, "interface": desired}
 
 
 def _wifi_label(percent: int) -> str:
@@ -158,6 +178,29 @@ def _wifi_label(percent: int) -> str:
     if percent < 75:
         return "Good"
     return "Excellent"
+
+
+_wifi_proc_missing_logged = False
+_wifi_parse_logged = False
+_wifi_missing_logged = False
+
+
+def _log_wifi_once(flag_name: str, message: str, *args: object) -> None:
+    global _wifi_proc_missing_logged, _wifi_parse_logged, _wifi_missing_logged
+    flags = {
+        "_wifi_proc_missing_logged": _wifi_proc_missing_logged,
+        "_wifi_parse_logged": _wifi_parse_logged,
+        "_wifi_missing_logged": _wifi_missing_logged,
+    }
+    if flags.get(flag_name):
+        return
+    get_logger().error(message, *args)
+    if flag_name == "_wifi_proc_missing_logged":
+        _wifi_proc_missing_logged = True
+    elif flag_name == "_wifi_parse_logged":
+        _wifi_parse_logged = True
+    elif flag_name == "_wifi_missing_logged":
+        _wifi_missing_logged = True
 
 
 def get_status_payload() -> dict:
