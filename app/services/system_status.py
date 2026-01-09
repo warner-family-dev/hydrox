@@ -3,6 +3,7 @@ import time
 from pathlib import Path
 
 from app.services.liquidctl import has_liquidctl_devices
+from app.services.logger import get_logger
 
 
 def _read_proc(path: str) -> str:
@@ -122,9 +123,11 @@ def _format_duration(total_seconds: int) -> str:
 
 
 def get_wifi_strength(interface: str = "wlan0") -> dict:
+    logger = get_logger()
     try:
         lines = _read_proc("/proc/net/wireless").splitlines()[2:]
     except OSError:
+        logger.error("wifi strength unavailable: /proc/net/wireless not readable")
         return {"label": "unknown", "percent": None}
     for line in lines:
         if not line.strip():
@@ -134,13 +137,16 @@ def get_wifi_strength(interface: str = "wlan0") -> dict:
             continue
         parts = data.split()
         if len(parts) < 2:
+            logger.error("wifi strength parse error: missing link value for %s", interface)
             break
         try:
             link = float(parts[1])
         except ValueError:
+            logger.error("wifi strength parse error: non-numeric link value for %s", interface)
             break
         percent = int(max(0, min(100, round(link / 70 * 100))))
         return {"label": _wifi_label(percent), "percent": percent}
+    logger.error("wifi strength unavailable: interface %s not found", interface)
     return {"label": "unknown", "percent": None}
 
 

@@ -47,6 +47,7 @@ Environment variables (via `docker-compose.yml`):
 - App runtime logs: `logs/hydrox.log`
 - Build logs: `logs/builds/docker-compose-buildlog.log`
 - Use `scripts/docker-build-log.py` to capture timestamped build output
+- Wi-Fi strength reads from `/proc/net/wireless`; missing interfaces are logged to `hydrox.log`
 
 ## Hardware notes
 
