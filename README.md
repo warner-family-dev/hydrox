@@ -86,4 +86,4 @@ Build logs append to `logs/builds/docker-compose-buildlog.log`.
 - The image keeps build tooling installed so `smbus` can compile during `liquidctl` installation.
 - The container needs access to the VideoCore device for `vcgencmd` (`/dev/vcio` on Pi 5).
 - If `/dev/vcio` is missing, create it on the host: `sudo mknod /dev/vcio c 100 0` and ensure Docker can access it.
-- The app calls host `liquidctl` via `/host-bin/liquidctl` (mounted from `/home/pi/.local/bin`).
+- The app calls host `liquidctl` via `/host-liquidctl-venv/bin/liquidctl` (mounted from pipx).

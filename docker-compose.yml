@@ -9,6 +9,7 @@ services:
       - ./.git:/.git:ro
       - ./logs:/logs
       - /home/pi/.local/bin:/host-bin:ro
+      - /home/pi/.local/share/pipx/venvs/liquidctl:/host-liquidctl-venv:ro
       - /sys/devices/platform/cooling_fan:/sys/devices/platform/cooling_fan:ro
       - /sys/class/hwmon:/sys/class/hwmon:ro
     devices:
@@ -16,7 +17,7 @@ services:
     environment:
       - HYDROX_DB_PATH=/data/hydrox.db
       - HYDROX_GIT_DIR=/.git
-      - HYDROX_LIQUIDCTL_PATH=/host-bin/liquidctl
+      - HYDROX_LIQUIDCTL_PATH=/host-liquidctl-venv/bin/liquidctl
       - HYDROX_LOG_PATH=/logs/hydrox.log
       - TZ=America/Chicago
       - PUID=1000

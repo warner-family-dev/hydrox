@@ -57,6 +57,7 @@ def startup() -> None:
     seed_settings_if_empty()
     seed_metrics_if_empty()
     seed_fans_if_empty()
+    get_logger().info("system startup")
     cpu_thread = threading.Thread(target=_cpu_sampler, daemon=True)
     cpu_thread.start()
     fan_thread = threading.Thread(target=_fan_sampler, daemon=True)

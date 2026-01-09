@@ -38,3 +38,5 @@
 - Run the container with configured `PUID` and `PGID`.
 - Mount the correct host `liquidctl` binary path.
 - Mount `/sys/class/hwmon` and update CPU fan RPM fallback path.
+- Log system startup entries to `hydrox.log`.
+- Mount the pipx `liquidctl` venv for host CLI access.
