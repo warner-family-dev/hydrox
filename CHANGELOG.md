@@ -19,3 +19,4 @@
 - Add local datetime to build logs.
 - Install `libraspberrypi-bin` in the container to enable `vcgencmd`.
 - Add build log entry for the missing `libraspberrypi-bin` package error.
+- Add Raspberry Pi apt repo to install `libraspberrypi-bin` during builds.

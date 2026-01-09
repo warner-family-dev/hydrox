@@ -61,3 +61,7 @@ The service listens on `http://localhost:8000`.
 - Build logs record early failures such as missing packages.
 - Runtime logs are kept in Docker for now (use `docker compose logs -f`).
 - See `docs/logging.md` for the full plan.
+
+## Raspberry Pi tooling
+
+- The Docker image enables `vcgencmd` by adding the Raspberry Pi apt repo and installing `libraspberrypi-bin`.
