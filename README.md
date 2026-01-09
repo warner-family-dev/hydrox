@@ -36,6 +36,7 @@ The service listens on `http://localhost:8000`.
 ## Compose notes
 
 - The compose file omits the legacy `version` key (Compose v2+ ignores it).
+- The container runs as a non-root user and writes SQLite data to `/data`.
 
 ## Configuration
 

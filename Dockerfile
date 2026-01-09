@@ -7,7 +7,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR ${APP_HOME}
 
 RUN adduser --disabled-password --gecos '' appuser \
-    && mkdir -p /data ${APP_HOME}
+    && mkdir -p /data ${APP_HOME} \
+    && chown -R appuser:appuser /data ${APP_HOME}
 
 COPY requirements.txt ${APP_HOME}/requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
