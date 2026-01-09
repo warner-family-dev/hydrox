@@ -14,3 +14,4 @@
 - Handle missing git binary gracefully on the Admin page.
 - Install git in the container so Admin can read branch and commit metadata.
 - Add `.dockerignore` to exclude logs, env files, and local artifacts.
+- Add `.gitignore` for logs, env files, and local artifacts.
