@@ -56,3 +56,4 @@
 - Center chart axis labels and keep calibration modal open until restore.
 - Extend calibration countdown and make it dynamic until restore completes.
 - Add chart legends and hover tooltips.
+- Add admin status table with uptime, memory usage, and liquidctl connection.

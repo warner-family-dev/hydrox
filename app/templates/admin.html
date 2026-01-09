@@ -19,4 +19,29 @@
     <div class="metric-card__sub">Last recorded commit</div>
   </div>
 </section>
+
+<section class="panel">
+  <div class="panel__header">
+    <h2>Status</h2>
+    <span class="panel__tag">Daemon</span>
+  </div>
+  <table class="status-table">
+    <tr>
+      <th>Status</th>
+      <td class="status-cell"><span class="status-dot status-dot--ok"></span>{{ status.status }}</td>
+    </tr>
+    <tr>
+      <th>Uptime</th>
+      <td>{{ status.uptime }}</td>
+    </tr>
+    <tr>
+      <th>Memory Usage</th>
+      <td>{{ status.memory }}</td>
+    </tr>
+    <tr>
+      <th>Liquidctl</th>
+      <td>{{ status.liquidctl }}</td>
+    </tr>
+  </table>
+</section>
 {% endblock %}

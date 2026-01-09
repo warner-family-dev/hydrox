@@ -35,6 +35,7 @@ from app.services.settings import (
     set_active_profile_id,
     set_fan_count,
 )
+from app.services.system_status import get_status_payload
 
 app = FastAPI(title="Hydrox Command Center")
 
@@ -231,12 +232,14 @@ def create_screen(
 @app.get("/admin", response_class=HTMLResponse)
 def admin(request: Request):
     branch, commit_date = get_git_status()
+    status = get_status_payload()
     return templates.TemplateResponse(
         "admin.html",
         {
             "request": request,
             "branch": branch,
             "commit_date": commit_date,
+            "status": status,
         },
     )
 

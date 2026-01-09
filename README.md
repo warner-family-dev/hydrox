@@ -9,7 +9,7 @@ Hydrox is a Raspberry Pi 5 command center for a wine cellar. It provides a web d
 - Profile Creator for staged fan/pump curves and schedules
 - Screen Updater for three OLED panels with templates, font settings, and rotation timing
 - Settings page for renaming fan channels and setting the active fan count
-- Admin page showing git branch and last commit date
+- Admin page showing git metadata plus uptime, memory usage, and liquidctl status
 
 ## Stack
 
@@ -47,7 +47,6 @@ Build logs append to `logs/builds/docker-compose-buildlog.log`.
 ## Compose notes
 
 - The compose file omits the legacy `version` key (Compose v2+ ignores it).
-- The container runs as a non-root user and writes SQLite data to `/data`.
 - Compose now uses a named volume for `/data` to avoid host permission issues.
 - App logs are written to `/logs/hydrox.log` (mapped to `./logs` on the host).
 - The container runs as root to access hardware while preserving file permissions via `PUID`/`PGID`.

@@ -61,3 +61,8 @@ def get_fan_rpms() -> Dict[int, int]:
     if not rpms:
         logger.error("liquidctl status returned no fan RPMs")
     return rpms
+
+
+def has_liquidctl_devices() -> bool:
+    _, stdout, _ = _run_liquidctl(["list"])
+    return "Device #" in stdout
