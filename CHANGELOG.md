@@ -2,10 +2,6 @@
 
 ## v0.0.2 - January 9, 2026
 
-- Add admin status table with uptime, memory usage, and liquidctl connection.
-- Expand admin status table with CPU load, disk usage, RAM percent, and image uptime.
-- Add CI spot-check workflow for PRs into main.
-- Add CI safeguards to block direct pushes to main and prevent dev-docs merges.
 - Add Wi-Fi signal gauge to the admin status table and remove duplicate disk row.
 
 ## v0.0.1 - January 8, 2026
@@ -64,3 +60,7 @@
 - Center chart axis labels and keep calibration modal open until restore.
 - Extend calibration countdown and make it dynamic until restore completes.
 - Add chart legends and hover tooltips.
+- Add admin status table with uptime, memory usage, and liquidctl connection.
+- Expand admin status table with CPU load, disk usage, RAM percent, and image uptime.
+- Add CI spot-check workflow for PRs into main.
+- Add CI safeguards to block direct pushes to main and prevent dev-docs merges.

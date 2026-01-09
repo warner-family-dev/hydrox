@@ -80,6 +80,7 @@ Additional workflows block direct pushes to `main` and prevent `dev-docs/` or `R
 - Calibration shows a countdown modal while the fan sweep runs (20s + restore grace).
 - Calibration modal stays open until fan speeds are restored.
 - Charts include hover tooltips and legends mapping colors to channels.
+- Changelog v0.0.2 contains the Wi-Fi signal gauge update only.
 
 ## Logging
 
