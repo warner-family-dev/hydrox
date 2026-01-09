@@ -9,17 +9,35 @@ LIQUIDCTL_PATH_ENV = "HYDROX_LIQUIDCTL_PATH"
 DEFAULT_LIQUIDCTL_PATH = "/usr/bin/liquidctl"
 
 
+def _candidate_paths() -> list[str]:
+    env_path = os.getenv(LIQUIDCTL_PATH_ENV, DEFAULT_LIQUIDCTL_PATH)
+    paths = [env_path, "/usr/local/bin/liquidctl", "/usr/bin/liquidctl"]
+    deduped = []
+    for path in paths:
+        if path and path not in deduped:
+            deduped.append(path)
+    return deduped
+
+
 def _run_liquidctl(args: list[str]) -> Tuple[int, str, str]:
     logger = get_logger()
-    cmd = [os.getenv(LIQUIDCTL_PATH_ENV, DEFAULT_LIQUIDCTL_PATH)] + args
-    try:
-        result = subprocess.run(cmd, capture_output=True, text=True, check=False)
-    except FileNotFoundError:
-        logger.error("liquidctl not found at %s", cmd[0])
-        return 127, "", "liquidctl not found"
-    if result.returncode != 0:
-        logger.error("liquidctl command failed: %s | stderr=%s", " ".join(cmd), result.stderr.strip())
-    return result.returncode, result.stdout.strip(), result.stderr.strip()
+    last_error = "liquidctl not found"
+    for path in _candidate_paths():
+        cmd = [path] + args
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+        except FileNotFoundError:
+            logger.error("liquidctl not found at %s", path)
+            last_error = "liquidctl not found"
+            continue
+        except PermissionError:
+            logger.error("liquidctl permission denied at %s", path)
+            last_error = "liquidctl permission denied"
+            continue
+        if result.returncode != 0:
+            logger.error("liquidctl command failed: %s | stderr=%s", " ".join(cmd), result.stderr.strip())
+        return result.returncode, result.stdout.strip(), result.stderr.strip()
+    return 127, "", last_error
 
 
 def set_fan_speed(channel_index: int, percent: int) -> bool:
