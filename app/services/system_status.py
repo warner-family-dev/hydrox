@@ -21,6 +21,7 @@ def get_uptime() -> str:
 
 
 _IMAGE_START: float | None = None
+_WIFI_CACHE: dict | None = None
 
 
 def set_image_start_time(epoch_seconds: float) -> None:
@@ -33,6 +34,11 @@ def get_image_uptime() -> str:
         return "unknown"
     elapsed = max(0, int(time.time() - _IMAGE_START))
     return _format_duration(elapsed)
+
+
+def set_wifi_cache(payload: dict) -> None:
+    global _WIFI_CACHE
+    _WIFI_CACHE = payload
 
 
 def get_memory_usage() -> str:
@@ -124,6 +130,12 @@ def _format_duration(total_seconds: int) -> str:
 
 
 def get_wifi_strength(interface: str = "wlan0") -> dict:
+    if _WIFI_CACHE is not None:
+        return _WIFI_CACHE
+    return _read_wifi_strength(interface)
+
+
+def _read_wifi_strength(interface: str = "wlan0") -> dict:
     logger = get_logger()
     desired = os.getenv("HYDROX_WIFI_INTERFACE", interface)
     try:

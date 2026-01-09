@@ -6,6 +6,7 @@
 - Log Wi-Fi signal read failures to `hydrox.log`.
 - Auto-refresh admin status metrics every 5 seconds.
 - Add Wi-Fi interface fallback and log missing interface once per boot.
+- Move hardware sampling into an internal daemon thread.
 - Rewrite README to focus on usage, setup, and requirements.
 
 ## v0.0.1 - January 8, 2026
