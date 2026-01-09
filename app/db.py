@@ -69,8 +69,27 @@ def init_db() -> None:
                 channel_index INTEGER NOT NULL UNIQUE,
                 name TEXT NOT NULL,
                 default_name TEXT NOT NULL,
+                active INTEGER NOT NULL DEFAULT 1,
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP
             )
             """
         )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS settings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                key TEXT NOT NULL UNIQUE,
+                value TEXT NOT NULL,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+        _ensure_column(conn, "fan_channels", "active", "INTEGER NOT NULL DEFAULT 1")
         conn.commit()
+
+
+def _ensure_column(conn: sqlite3.Connection, table: str, column: str, definition: str) -> None:
+    columns = conn.execute(f"PRAGMA table_info({table})").fetchall()
+    column_names = {row[1] for row in columns}
+    if column not in column_names:
+        conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")

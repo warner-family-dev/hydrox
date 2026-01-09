@@ -39,12 +39,12 @@
   <div class="panel">
     <div class="panel__header">
       <h2>Fan Channels</h2>
-      <span class="panel__tag">Rename coming soon</span>
+      <span class="panel__tag">Configurable</span>
     </div>
     <div class="fan-grid">
-      {% for i in range(1, 8) %}
+      {% for fan in fans %}
       <div class="fan-tile">
-        <div class="fan-tile__title">Fan {{ i }}</div>
+        <div class="fan-tile__title">{{ fan.name }}</div>
         <div class="fan-tile__value">-- RPM</div>
         <div class="fan-tile__sub">Awaiting live feed</div>
       </div>
@@ -56,19 +56,50 @@
       <h2>Temperature Trend</h2>
       <span class="panel__tag">Last 12 samples</span>
     </div>
+    <div class="sparkline__toggles">
+      <label class="toggle">
+        <input type="checkbox" data-target="cpu-line" checked />
+        <span>CPU</span>
+      </label>
+      <label class="toggle">
+        <input type="checkbox" data-target="ambient-line" checked />
+        <span>Ambient</span>
+      </label>
+      <label class="toggle">
+        <input type="checkbox" data-target="fan-line" checked />
+        <span>Fan RPM</span>
+      </label>
+      <label class="toggle">
+        <input type="checkbox" data-target="pump-line" checked />
+        <span>Pump %</span>
+      </label>
+    </div>
     <div class="sparkline">
       <div class="sparkline__label">CPU Temp</div>
       <svg viewBox="0 0 140 40" class="sparkline__chart" aria-hidden="true">
-        <polyline points="{{ cpu_points }}" fill="none" stroke="var(--accent)" stroke-width="2" />
+        <polyline id="cpu-line" points="{{ cpu_points }}" fill="none" stroke="var(--accent)" stroke-width="2" />
       </svg>
     </div>
     <div class="sparkline">
       <div class="sparkline__label">Ambient Temp</div>
       <svg viewBox="0 0 140 40" class="sparkline__chart" aria-hidden="true">
-        <polyline points="{{ ambient_points }}" fill="none" stroke="var(--alert)" stroke-width="2" />
+        <polyline id="ambient-line" points="{{ ambient_points }}" fill="none" stroke="var(--alert)" stroke-width="2" />
+      </svg>
+    </div>
+    <div class="sparkline">
+      <div class="sparkline__label">Fan RPM</div>
+      <svg viewBox="0 0 140 40" class="sparkline__chart" aria-hidden="true">
+        <polyline id="fan-line" points="{{ fan_points }}" fill="none" stroke="#22c55e" stroke-width="2" />
+      </svg>
+    </div>
+    <div class="sparkline">
+      <div class="sparkline__label">Pump %</div>
+      <svg viewBox="0 0 140 40" class="sparkline__chart" aria-hidden="true">
+        <polyline id="pump-line" points="{{ pump_points }}" fill="none" stroke="#f97316" stroke-width="2" />
       </svg>
     </div>
     <div class="sparkline__note">Historical samples are seeded until ingestion is wired in.</div>
   </div>
 </section>
+<script src="/static/js/dashboard.js"></script>
 {% endblock %}

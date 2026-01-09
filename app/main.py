@@ -1,12 +1,15 @@
+import json
+
 from fastapi import FastAPI, Form, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from app.db import get_connection, init_db
-from app.services.fans import list_fans, seed_fans_if_empty, update_fan_name
+from app.services.fans import list_fans, seed_fans_if_empty, sync_fan_count, update_fan_name
 from app.services.git_info import get_git_status
 from app.services.metrics import insert_metrics, latest_metrics, recent_metrics, seed_metrics_if_empty
+from app.services.settings import get_fan_count, seed_settings_if_empty, set_fan_count
 
 app = FastAPI(title="Hydrox Command Center")
 
@@ -18,6 +21,7 @@ templates = Jinja2Templates(directory="app/templates")
 @app.on_event("startup")
 def startup() -> None:
     init_db()
+    seed_settings_if_empty()
     seed_metrics_if_empty()
     seed_fans_if_empty()
 
@@ -48,6 +52,9 @@ def dashboard(request: Request):
     history = recent_metrics()
     cpu_points = _build_sparkline_points([row["cpu_temp"] for row in history])
     ambient_points = _build_sparkline_points([row["ambient_temp"] for row in history])
+    fan_points = _build_sparkline_points([row["fan_rpm"] for row in history])
+    pump_points = _build_sparkline_points([row["pump_percent"] for row in history])
+    fans = list_fans(active_only=True)
     return templates.TemplateResponse(
         "dashboard.html",
         {
@@ -55,25 +62,22 @@ def dashboard(request: Request):
             "metrics": metrics,
             "cpu_points": cpu_points,
             "ambient_points": ambient_points,
+            "fan_points": fan_points,
+            "pump_points": pump_points,
+            "fans": fans,
         },
     )
 
 
 @app.get("/profiles", response_class=HTMLResponse)
 def profiles(request: Request):
-    with get_connection() as conn:
-        rows = conn.execute(
-            """
-            SELECT id, name, curve_json, schedule_json, created_at
-            FROM profiles
-            ORDER BY created_at DESC
-            """
-        ).fetchall()
+    rows = _load_profiles()
     return templates.TemplateResponse(
         "profiles.html",
         {
             "request": request,
             "profiles": [dict(row) for row in rows],
+            "error": None,
         },
     )
 
@@ -84,6 +88,17 @@ def create_profile(
     curve_json: str = Form(...),
     schedule_json: str = Form(""),
 ):
+    error = _validate_profile_json(curve_json, schedule_json)
+    if error:
+        rows = _load_profiles()
+        return templates.TemplateResponse(
+            "profiles.html",
+            {
+                "request": request,
+                "profiles": [dict(row) for row in rows],
+                "error": error,
+            },
+        )
     with get_connection() as conn:
         conn.execute(
             """
@@ -154,11 +169,13 @@ def admin(request: Request):
 @app.get("/settings", response_class=HTMLResponse)
 def settings(request: Request):
     fans = list_fans()
+    fan_count = get_fan_count()
     return templates.TemplateResponse(
         "settings.html",
         {
             "request": request,
             "fans": fans,
+            "fan_count": fan_count,
         },
     )
 
@@ -166,6 +183,13 @@ def settings(request: Request):
 @app.post("/settings/fans")
 def rename_fan(fan_id: int = Form(...), name: str = Form(...)):
     update_fan_name(fan_id, name)
+    return RedirectResponse("/settings", status_code=303)
+
+
+@app.post("/settings/fan-count")
+def update_fan_count(fan_count: int = Form(...)):
+    set_fan_count(fan_count)
+    sync_fan_count(get_fan_count())
     return RedirectResponse("/settings", status_code=303)
 
 
@@ -183,3 +207,62 @@ def ingest_metrics(
 @app.get("/api/metrics/latest")
 def get_latest_metrics():
     return JSONResponse(latest_metrics() or {})
+
+
+def _load_profiles():
+    with get_connection() as conn:
+        rows = conn.execute(
+            """
+            SELECT id, name, curve_json, schedule_json, created_at
+            FROM profiles
+            ORDER BY created_at DESC
+            """
+        ).fetchall()
+        return rows
+
+
+def _validate_profile_json(curve_json: str, schedule_json: str) -> str | None:
+    try:
+        curve = json.loads(curve_json)
+    except json.JSONDecodeError:
+        return "Curve JSON must be valid JSON."
+
+    if not isinstance(curve, dict) or not curve:
+        return "Curve JSON must be an object with per-fan entries."
+
+    for channel, points in curve.items():
+        if not isinstance(points, list) or not points:
+            return f"Curve for {channel} must be a non-empty list."
+        for point in points:
+            if not isinstance(point, dict):
+                return f"Curve point for {channel} must be an object."
+            if "temp" not in point or "fan" not in point:
+                return f"Curve point for {channel} must include temp and fan."
+            if not isinstance(point["temp"], (int, float)):
+                return f"Curve temp for {channel} must be a number."
+            if not isinstance(point["fan"], (int, float)):
+                return f"Curve fan for {channel} must be a number."
+            if not 0 <= float(point["fan"]) <= 100:
+                return f"Curve fan for {channel} must be 0-100."
+
+    if schedule_json:
+        try:
+            schedule = json.loads(schedule_json)
+        except json.JSONDecodeError:
+            return "Schedule JSON must be valid JSON."
+        if not isinstance(schedule, dict):
+            return "Schedule JSON must be an object."
+        if "cron" in schedule and not isinstance(schedule["cron"], str):
+            return "Schedule cron must be a string."
+        if "window" in schedule:
+            window = schedule["window"]
+            if not isinstance(window, dict):
+                return "Schedule window must be an object."
+            if "days" in window and not isinstance(window["days"], list):
+                return "Schedule window days must be a list."
+            if "start" in window and not isinstance(window["start"], str):
+                return "Schedule window start must be a string."
+            if "end" in window and not isinstance(window["end"], str):
+                return "Schedule window end must be a string."
+
+    return None

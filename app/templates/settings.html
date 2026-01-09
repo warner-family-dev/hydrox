@@ -12,12 +12,24 @@
     <h2>Fan Channels</h2>
     <span class="panel__tag">Rename</span>
   </div>
+  <form class="settings-count" method="post" action="/settings/fan-count">
+    <label class="form__label">Active fan count</label>
+    <div class="settings-count__row">
+      <input class="form__input" type="number" name="fan_count" min="1" max="16" value="{{ fan_count }}" required />
+      <button class="button button--ghost" type="submit">Update Count</button>
+    </div>
+  </form>
   <div class="settings-list">
     {% for fan in fans %}
     <form class="settings-row" method="post" action="/settings/fans">
       <input type="hidden" name="fan_id" value="{{ fan.id }}" />
       <div class="settings-row__label">Channel {{ fan.channel_index }}</div>
-      <div class="settings-row__meta">Default: {{ fan.default_name }}</div>
+      <div class="settings-row__meta">
+        Default: {{ fan.default_name }}
+        {% if fan.active == 0 %}
+        <span class="settings-row__inactive">Inactive</span>
+        {% endif %}
+      </div>
       <input class="form__input" type="text" name="name" value="{{ fan.name }}" required />
       <button class="button button--ghost" type="submit">Update</button>
     </form>
