@@ -88,3 +88,4 @@ Build logs append to `logs/builds/docker-compose-buildlog.log`.
 - If `/dev/vcio` is missing, create it on the host: `sudo mknod /dev/vcio c 100 0` and ensure Docker can access it.
 - The image installs `liquidctl` in a builder stage and ships it at `/root/.local/bin/liquidctl`.
 - USB devices are passed through via `/dev/bus/usb` for liquidctl device access.
+- VideoCore device access is provided via `/dev/vcio`.

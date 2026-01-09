@@ -47,3 +47,4 @@
 - Run the container as root and relax permissions on the embedded liquidctl.
 - Remove `user:` override so root can execute embedded liquidctl.
 - Pass `/dev/bus/usb` into the container for liquidctl device access.
+- Fix duplicate `devices` entry in docker-compose.

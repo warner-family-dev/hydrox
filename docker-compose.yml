@@ -12,7 +12,6 @@ services:
       - /sys/class/hwmon:/sys/class/hwmon:ro
     devices:
       - /dev/bus/usb:/dev/bus/usb
-    devices:
       - /dev/vcio:/dev/vcio
     environment:
       - HYDROX_DB_PATH=/data/hydrox.db
