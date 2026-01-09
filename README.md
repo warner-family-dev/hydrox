@@ -44,6 +44,10 @@ scripts/docker-build-log.py
 
 Build logs append to `logs/builds/docker-compose-buildlog.log`.
 
+## CI spot checks
+
+Pull requests to `main` run a lightweight workflow that installs Python deps, byte-compiles the app, and runs tests when present.
+
 ## Compose notes
 
 - The compose file omits the legacy `version` key (Compose v2+ ignores it).
