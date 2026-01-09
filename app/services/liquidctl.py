@@ -63,6 +63,25 @@ def get_fan_rpms() -> Dict[int, int]:
     return rpms
 
 
+def get_liquid_temps() -> list[float]:
+    logger = get_logger()
+    _, stdout, _ = _run_liquidctl(["status"])
+    temps: list[float] = []
+    for line in stdout.splitlines():
+        lowered = line.lower()
+        if "temp" not in lowered and "sensor" not in lowered:
+            continue
+        match = re.search(r"(-?\d+(?:\.\d+)?)\s*°?C", line)
+        if match:
+            try:
+                temps.append(float(match.group(1)))
+            except ValueError:
+                continue
+    if not temps:
+        logger.error("liquidctl status returned no temperatures")
+    return temps
+
+
 def has_liquidctl_devices() -> bool:
     _, stdout, _ = _run_liquidctl(["list"])
     return "Device #" in stdout

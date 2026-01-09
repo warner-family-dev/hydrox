@@ -1,8 +1,11 @@
+import os
 import shutil
+import subprocess
 import time
 from pathlib import Path
 
 from app.services.liquidctl import has_liquidctl_devices
+from app.services.logger import get_logger
 
 
 def _read_proc(path: str) -> str:
@@ -19,6 +22,7 @@ def get_uptime() -> str:
 
 
 _IMAGE_START: float | None = None
+_WIFI_CACHE: dict | None = None
 
 
 def set_image_start_time(epoch_seconds: float) -> None:
@@ -31,6 +35,11 @@ def get_image_uptime() -> str:
         return "unknown"
     elapsed = max(0, int(time.time() - _IMAGE_START))
     return _format_duration(elapsed)
+
+
+def set_wifi_cache(payload: dict) -> None:
+    global _WIFI_CACHE
+    _WIFI_CACHE = payload
 
 
 def get_memory_usage() -> str:
@@ -121,6 +130,203 @@ def _format_duration(total_seconds: int) -> str:
     return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
 
 
+def get_wifi_strength(interface: str = "wlan0") -> dict:
+    if _WIFI_CACHE is not None:
+        return _WIFI_CACHE
+    return _read_wifi_strength(interface)
+
+
+def _read_wifi_strength(interface: str = "wlan0") -> dict:
+    logger = get_logger()
+    desired = os.getenv("HYDROX_WIFI_INTERFACE", interface)
+    wpa_result = _read_wpa_signal(desired)
+    if wpa_result is not None:
+        return wpa_result
+    proc_path = os.getenv("HYDROX_WIFI_PROC_PATH", "/proc/net/wireless")
+    sysfs_result = _read_sysfs_wifi(desired)
+    if sysfs_result is not None:
+        return sysfs_result
+    try:
+        lines = _read_proc(proc_path).splitlines()[2:]
+    except OSError:
+        _log_wifi_once(
+            "_wifi_proc_missing_logged",
+            "wifi strength unavailable: %s not readable",
+            proc_path,
+        )
+        return {"label": "unknown", "percent": None, "interface": desired}
+    entries: dict[str, float] = {}
+    for line in lines:
+        if not line.strip():
+            continue
+        name, data = line.split(":", 1)
+        parts = data.split()
+        if len(parts) < 2:
+            _log_wifi_once(
+                "_wifi_parse_logged",
+                "wifi strength parse error: missing link value for %s",
+                name.strip(),
+            )
+            continue
+        try:
+            link = float(parts[1])
+        except ValueError:
+            _log_wifi_once(
+                "_wifi_parse_logged",
+                "wifi strength parse error: non-numeric link value for %s",
+                name.strip(),
+            )
+            continue
+        entries[name.strip()] = link
+    if not entries:
+        _log_wifi_once("_wifi_parse_logged", "wifi strength unavailable: no wireless interfaces found")
+        return {"label": "unknown", "percent": None, "interface": desired}
+    if desired not in entries:
+        fallback = next(iter(entries.keys()))
+        _log_wifi_once(
+            "_wifi_missing_logged",
+            "wifi strength unavailable: interface %s not found; using %s",
+            desired,
+            fallback,
+        )
+        desired = fallback
+    percent = int(max(0, min(100, round(entries[desired] / 70 * 100))))
+    return {"label": _wifi_label(percent), "percent": percent, "interface": desired}
+
+
+def _wifi_label(percent: int) -> str:
+    if percent < 25:
+        return "Poor"
+    if percent < 50:
+        return "OK"
+    if percent < 75:
+        return "Good"
+    return "Excellent"
+
+
+_wifi_proc_missing_logged = False
+_wifi_parse_logged = False
+_wifi_missing_logged = False
+_wifi_sys_missing_logged = False
+_wifi_wpa_missing_logged = False
+
+
+def _log_wifi_once(flag_name: str, message: str, *args: object) -> None:
+    global _wifi_proc_missing_logged, _wifi_parse_logged, _wifi_missing_logged, _wifi_sys_missing_logged
+    global _wifi_wpa_missing_logged
+    flags = {
+        "_wifi_proc_missing_logged": _wifi_proc_missing_logged,
+        "_wifi_parse_logged": _wifi_parse_logged,
+        "_wifi_missing_logged": _wifi_missing_logged,
+        "_wifi_sys_missing_logged": _wifi_sys_missing_logged,
+        "_wifi_wpa_missing_logged": _wifi_wpa_missing_logged,
+    }
+    if flags.get(flag_name):
+        return
+    get_logger().error(message, *args)
+    if flag_name == "_wifi_proc_missing_logged":
+        _wifi_proc_missing_logged = True
+    elif flag_name == "_wifi_parse_logged":
+        _wifi_parse_logged = True
+    elif flag_name == "_wifi_missing_logged":
+        _wifi_missing_logged = True
+    elif flag_name == "_wifi_sys_missing_logged":
+        _wifi_sys_missing_logged = True
+    elif flag_name == "_wifi_wpa_missing_logged":
+        _wifi_wpa_missing_logged = True
+
+
+def _read_sysfs_wifi(interface: str) -> dict | None:
+    base_path = os.getenv("HYDROX_WIFI_SYS_PATH", "/host-sys/class/net")
+    link_path = Path(base_path) / interface / "wireless" / "link"
+    if not link_path.exists():
+        _log_wifi_once(
+            "_wifi_sys_missing_logged",
+            "wifi strength unavailable: %s not found",
+            link_path,
+        )
+        return None
+    try:
+        link_raw = link_path.read_text(encoding="utf-8").strip()
+        link_value = float(link_raw)
+    except OSError:
+        _log_wifi_once(
+            "_wifi_sys_missing_logged",
+            "wifi strength unavailable: %s not readable",
+            link_path,
+        )
+        return None
+    except ValueError:
+        _log_wifi_once(
+            "_wifi_parse_logged",
+            "wifi strength parse error: non-numeric link value for %s",
+            interface,
+        )
+        return None
+    percent = int(max(0, min(100, round(link_value / 70 * 100))))
+    return {"label": _wifi_label(percent), "percent": percent, "interface": interface}
+
+
+def _read_wpa_signal(interface: str) -> dict | None:
+    socket_path = os.getenv("HYDROX_WIFI_WPA_PATH", "/host-run/wpa_supplicant")
+    try:
+        result = subprocess.run(
+            ["wpa_cli", "-p", socket_path, "-i", interface, "signal_poll"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except FileNotFoundError:
+        _log_wifi_once("_wifi_wpa_missing_logged", "wifi strength unavailable: wpa_cli not installed")
+        return None
+    if result.returncode != 0:
+        _log_wifi_once(
+            "_wifi_wpa_missing_logged",
+            "wifi strength unavailable: wpa_cli failed for %s: %s",
+            interface,
+            result.stderr.strip() or result.stdout.strip(),
+        )
+        return None
+    rssi = _parse_wpa_signal(result.stdout)
+    if rssi is None:
+        _log_wifi_once(
+            "_wifi_parse_logged",
+            "wifi strength parse error: wpa_cli missing RSSI for %s",
+            interface,
+        )
+        return None
+    percent = _signal_to_percent(rssi)
+    return {"label": _wifi_label(percent), "percent": percent, "interface": interface}
+
+
+def _parse_wpa_signal(output: str) -> int | None:
+    for line in output.splitlines():
+        if line.startswith("RSSI="):
+            try:
+                return int(line.split("=", 1)[1].strip())
+            except ValueError:
+                return None
+    return None
+
+
+def _parse_iw_signal(output: str) -> int | None:
+    for line in output.splitlines():
+        line = line.strip()
+        if line.startswith("signal:"):
+            parts = line.split()
+            if len(parts) >= 2:
+                try:
+                    return int(float(parts[1]))
+                except ValueError:
+                    return None
+    return None
+
+
+def _signal_to_percent(signal_dbm: int) -> int:
+    normalized = 2 * (signal_dbm + 100)
+    return int(max(0, min(100, normalized)))
+
+
 def get_status_payload() -> dict:
     return {
         "status": "Ok",
@@ -128,7 +334,7 @@ def get_status_payload() -> dict:
         "image_uptime": get_image_uptime(),
         "cpu": get_cpu_usage(),
         "memory": get_memory_usage(),
-        "disk_root": get_disk_usage("/"),
         "disk_data": get_disk_usage("/data"),
         "liquidctl": get_liquidctl_status(),
+        "wifi": get_wifi_strength(),
     }

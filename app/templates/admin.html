@@ -28,36 +28,49 @@
   <table class="status-table">
     <tr>
       <th>Status</th>
-      <td class="status-cell"><span class="status-dot status-dot--ok"></span>{{ status.status }}</td>
+      <td class="status-cell"><span class="status-dot status-dot--ok"></span><span data-admin-field="status">{{ status.status }}</span></td>
     </tr>
     <tr>
       <th>Host Uptime</th>
-      <td>{{ status.host_uptime }}</td>
+      <td data-admin-field="host_uptime">{{ status.host_uptime }}</td>
     </tr>
     <tr>
       <th>Image Uptime</th>
-      <td>{{ status.image_uptime }}</td>
+      <td data-admin-field="image_uptime">{{ status.image_uptime }}</td>
     </tr>
     <tr>
       <th>CPU Load</th>
-      <td>{{ status.cpu }}</td>
+      <td data-admin-field="cpu">{{ status.cpu }}</td>
     </tr>
     <tr>
       <th>RAM Usage</th>
-      <td>{{ status.memory }}</td>
-    </tr>
-    <tr>
-      <th>Disk /</th>
-      <td>{{ status.disk_root }}</td>
+      <td data-admin-field="memory">{{ status.memory }}</td>
     </tr>
     <tr>
       <th>Disk /data</th>
-      <td>{{ status.disk_data }}</td>
+      <td data-admin-field="disk_data">{{ status.disk_data }}</td>
+    </tr>
+    <tr>
+      <th>Wi-Fi (<span data-admin-field="wifi_interface">{{ status.wifi.interface or "wlan0" }}</span>)</th>
+      <td data-admin-field="wifi">
+        {% if status.wifi.percent is not none %}
+        <div class="wifi-meter">
+          <div class="wifi-meter__bar">
+            <div class="wifi-meter__fill" style="width: {{ status.wifi.percent }}%;"></div>
+          </div>
+          <div class="wifi-meter__label">{{ status.wifi.percent }}% ({{ status.wifi.label }})</div>
+        </div>
+        {% else %}
+        <div class="wifi-meter__label">unknown</div>
+        <div class="wifi-meter__note">Wi-Fi strength detection needs follow-up.</div>
+        {% endif %}
+      </td>
     </tr>
     <tr>
       <th>Liquidctl</th>
-      <td>{{ status.liquidctl }}</td>
+      <td data-admin-field="liquidctl">{{ status.liquidctl }}</td>
     </tr>
   </table>
 </section>
+<script src="/static/js/admin.js"></script>
 {% endblock %}

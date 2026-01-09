@@ -104,8 +104,35 @@ def init_db() -> None:
             )
             """
         )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS sensors (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                kind TEXT NOT NULL,
+                source_id TEXT NOT NULL,
+                name TEXT NOT NULL,
+                default_name TEXT NOT NULL,
+                unit TEXT NOT NULL DEFAULT 'C',
+                active INTEGER NOT NULL DEFAULT 1,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(kind, source_id)
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS sensor_readings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                sensor_id INTEGER NOT NULL,
+                temp_c REAL NOT NULL,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
         _ensure_column(conn, "fan_channels", "active", "INTEGER NOT NULL DEFAULT 1")
         _ensure_column(conn, "fan_channels", "max_rpm", "INTEGER")
+        _ensure_column(conn, "sensors", "unit", "TEXT NOT NULL DEFAULT 'C'")
+        _ensure_column(conn, "sensors", "active", "INTEGER NOT NULL DEFAULT 1")
         conn.commit()
 
 

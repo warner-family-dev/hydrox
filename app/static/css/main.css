@@ -264,6 +264,38 @@ body {
   box-shadow: 0 0 8px rgba(45, 212, 191, 0.5);
 }
 
+.wifi-meter {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.wifi-meter__bar {
+  width: 140px;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.wifi-meter__fill {
+  height: 100%;
+  background: linear-gradient(90deg, #e05252, #f4a34e, #2dd4bf);
+  border-radius: 999px;
+}
+
+.wifi-meter__label {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.wifi-meter__note {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
 .fan-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));

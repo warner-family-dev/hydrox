@@ -1,5 +1,25 @@
 ### Changelog
 
+## v0.0.2 - January 9, 2026
+
+- Add Wi-Fi signal gauge to the admin status table and remove duplicate disk row.
+- Log Wi-Fi signal read failures to `hydrox.log`.
+- Auto-refresh admin status metrics every 5 seconds.
+- Add Wi-Fi interface fallback and log missing interface once per boot.
+- Move hardware sampling into an internal daemon thread.
+- Switch Wi-Fi signal collection to `iw` and drop host `/proc` binding.
+- Fix missing threading import that prevented app startup.
+- Append container logs after compose up to the build log wrapper.
+- Auto-detect Wi-Fi interface when `wlan0` is missing.
+- Revert Wi-Fi detection to host `/proc/net/wireless` bind-mount.
+- Add sysfs Wi-Fi fallback via `/sys/class/net`.
+- Add wpa_cli signal polling via `/run/wpa_supplicant`.
+- Add admin note that Wi-Fi strength detection needs follow-up.
+- Add sensor management with DS18B20 discovery, Liquid Temp 1/2 mapping, and unit conversion.
+- Parse liquidctl sensor temperature lines for Liquid Temp 1/2.
+- Reorder dashboard layout and plot sensor temperatures in the trend chart.
+- Rewrite README to focus on usage, setup, and requirements.
+
 ## v0.0.1 - January 8, 2026
 
 - Initial commit

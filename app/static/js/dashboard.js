@@ -1,6 +1,6 @@
 const toggles = document.querySelectorAll('.toggle input');
 const metricEls = document.querySelectorAll('[data-metric]');
-const lineIds = ['cpu-line', 'ambient-line'];
+const tempPalette = ['#38bdf8', '#22c55e', '#f97316', '#a855f7', '#eab308', '#f472b6', '#14b8a6'];
 const grid = document.getElementById('trend-grid');
 const labels = document.getElementById('trend-labels');
 const fanGrid = document.getElementById('fan-grid');
@@ -14,7 +14,8 @@ const fanChart = document.querySelector('[data-chart="fan"]');
 
 const fanPalette = ['#38bdf8', '#818cf8', '#f472b6', '#22c55e', '#eab308', '#f97316', '#a855f7'];
 const fanTiles = document.querySelectorAll('[data-fan-channel]');
-let latestTempSeries = { cpu: [], ambient: [] };
+const sensorTiles = document.querySelectorAll('[data-sensor-id]');
+let latestTempSeries = [];
 let latestFanSeries = {};
 let latestTempLabels = [];
 
@@ -72,36 +73,63 @@ const refreshMetrics = async () => {
 
 const refreshTrend = async () => {
   try {
-    const response = await fetch('/api/metrics/recent?limit=24', { cache: 'no-store' });
+    const response = await fetch('/api/temperature/recent?limit=24', { cache: 'no-store' });
     if (!response.ok) {
       return;
     }
-    const data = await response.json();
-    if (!Array.isArray(data) || data.length < 2) {
+    const payload = await response.json();
+    const series = payload.series || {};
+    const sensorMeta = payload.sensors || [];
+    const sensorNameMap = new Map(sensorMeta.map((sensor) => [String(sensor.id), sensor.name]));
+    const cpu = series.cpu || [];
+    const ambient = series.ambient || [];
+    const tempSeries = [];
+    if (cpu.length > 1) {
+      tempSeries.push({ key: 'cpu', label: 'CPU', values: cpu, color: 'var(--accent)' });
+    }
+    if (ambient.length > 1) {
+      tempSeries.push({ key: 'ambient', label: 'Ambient', values: ambient, color: 'var(--alert)' });
+    }
+    sensorMeta.forEach((sensor, index) => {
+      const key = `sensor_${sensor.id}`;
+      const values = series[key] || [];
+      if (values.length < 2) {
+        return;
+      }
+      const label = sensorNameMap.get(String(sensor.id)) || `Sensor ${sensor.id}`;
+      const color = tempPalette[index % tempPalette.length];
+      tempSeries.push({ key, label, values, color });
+    });
+    if (!tempSeries.length) {
       return;
     }
-    const cpu = data.map((row) => row.cpu_temp);
-    const ambient = data.map((row) => row.ambient_temp);
-    const allTemps = cpu.concat(ambient);
+    const allTemps = tempSeries.flatMap((item) => item.values);
     const min = Math.min(...allTemps);
     const max = Math.max(...allTemps);
     const padding = Math.max((max - min) * 0.1, 0.5);
     const rangeMin = min - padding;
     const rangeMax = max + padding;
-    const seriesMap = {
-      'cpu-line': cpu,
-      'ambient-line': ambient,
-    };
     drawGrid(rangeMin, rangeMax);
-    lineIds.forEach((id) => {
-      const line = document.getElementById(id);
-      if (!line) {
+    const lines = Array.from(document.querySelectorAll('[data-temp-line]'));
+    lines.forEach((line) => {
+      const key = line.getAttribute('data-temp-line');
+      if (!key) {
         return;
       }
-      line.setAttribute('points', buildPoints(seriesMap[id], rangeMin, rangeMax));
+      const match = tempSeries.find((item) => item.key === key);
+      if (!match) {
+        line.setAttribute('points', '');
+        return;
+      }
+      line.setAttribute('points', buildPoints(match.values, rangeMin, rangeMax));
+      if (match.color) {
+        line.setAttribute('stroke', match.color);
+      }
     });
-    latestTempSeries = { cpu, ambient };
-    latestTempLabels = data.map((row) => row.created_at || '');
+    applyTempPalette(tempSeries);
+    updateTempLegend(tempSeries);
+    latestTempSeries = tempSeries;
+    latestTempLabels = payload.labels || [];
   } catch (error) {
     // Ignore transient fetch failures.
   }
@@ -226,6 +254,32 @@ const refreshFanTiles = async () => {
   }
 };
 
+const refreshSensors = async () => {
+  if (!sensorTiles.length) {
+    return;
+  }
+  try {
+    const response = await fetch('/api/sensors/latest', { cache: 'no-store' });
+    if (!response.ok) {
+      return;
+    }
+    const data = await response.json();
+    const readings = data.sensors || [];
+    const valueMap = new Map(readings.map((row) => [String(row.id), row.value]));
+    sensorTiles.forEach((tile) => {
+      const sensorId = tile.getAttribute('data-sensor-id');
+      const valueEl = tile.querySelector('.fan-tile__value');
+      if (!sensorId || !valueEl) {
+        return;
+      }
+      const value = valueMap.get(sensorId);
+      valueEl.textContent = value ?? '--';
+    });
+  } catch (error) {
+    // Ignore transient fetch failures.
+  }
+};
+
 toggles.forEach((toggle) => {
   toggle.addEventListener('change', (event) => {
     const targetId = event.target.getAttribute('data-target');
@@ -266,6 +320,38 @@ const applyFanPalette = () => {
   }
 };
 
+const applyTempPalette = (series) => {
+  const cpuToggle = document.querySelector('label input[data-target="cpu-line"]')?.parentElement;
+  if (cpuToggle) {
+    cpuToggle.style.setProperty('--toggle-color', 'var(--accent)');
+  }
+  const ambientToggle = document.querySelector('label input[data-target="ambient-line"]')?.parentElement;
+  if (ambientToggle) {
+    ambientToggle.style.setProperty('--toggle-color', 'var(--alert)');
+  }
+  const sensorColors = new Map(
+    series
+      .filter((item) => item.key.startsWith('sensor_'))
+      .map((item) => [item.key, item.color])
+  );
+  const sensorLabels = Array.from(document.querySelectorAll('label[data-series^="sensor_"]'));
+  sensorLabels.forEach((label) => {
+    const key = label.getAttribute('data-series');
+    const color = key ? sensorColors.get(key) : null;
+    if (color) {
+      label.style.setProperty('--toggle-color', color);
+    }
+  });
+  const tempLines = Array.from(document.querySelectorAll('[data-temp-line^="sensor_"]'));
+  tempLines.forEach((line) => {
+    const key = line.getAttribute('data-temp-line');
+    const color = key ? sensorColors.get(key) : null;
+    if (color) {
+      line.setAttribute('stroke', color);
+    }
+  });
+};
+
 const buildLegend = (container, items) => {
   if (!container) {
     return;
@@ -278,11 +364,17 @@ const buildLegend = (container, items) => {
     .join('');
 };
 
+const updateTempLegend = (series) => {
+  buildLegend(
+    tempLegend,
+    series.map((item) => ({ label: item.label, color: item.color }))
+  );
+};
+
 const updateLegends = () => {
-  buildLegend(tempLegend, [
-    { label: 'CPU', color: 'var(--accent)' },
-    { label: 'Ambient', color: 'var(--alert)' },
-  ]);
+  if (latestTempSeries.length) {
+    updateTempLegend(latestTempSeries);
+  }
 
   if (!fanLegend) {
     return;
@@ -337,19 +429,18 @@ const attachTooltip = (chart, tooltipEl, getSeries, unit) => {
 };
 
 applyFanPalette();
+applyTempPalette([]);
 drawFanGrid();
 updateLegends();
 refreshMetrics();
 refreshTrend();
 refreshFanChart();
 refreshFanTiles();
+refreshSensors();
 attachTooltip(
   tempChart,
   tempTooltip,
-  () => [
-    { label: 'CPU', values: latestTempSeries.cpu || [] },
-    { label: 'Ambient', values: latestTempSeries.ambient || [] },
-  ],
+  () => latestTempSeries,
   '°C'
 );
 attachTooltip(
@@ -385,5 +476,6 @@ setInterval(() => {
   refreshTrend();
   refreshFanChart();
   refreshFanTiles();
+  refreshSensors();
   updateLegends();
 }, 2000);
