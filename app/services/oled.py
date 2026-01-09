@@ -54,10 +54,28 @@ def publish_screen(payload: ScreenPayload, channel: int) -> None:
         logger.exception("oled publish failed for channel %s", channel)
 
 
+def clear_screen(channel: int) -> None:
+    logger = get_logger()
+    try:
+        _select_channel(channel)
+        serial = i2c(port=I2C_BUS, address=OLED_ADDR)
+        device = ssd1306(serial, width=128, height=64)
+        with canvas(device) as draw:
+            draw.rectangle(device.bounding_box, outline=0, fill=0)
+        _disable_channel()
+    except Exception:
+        logger.exception("oled clear failed for channel %s", channel)
+
+
 def _select_channel(channel: int) -> None:
     mask = 1 << channel
     with SMBus(I2C_BUS) as bus:
         bus.write_byte(PCA_ADDR, mask)
+
+
+def _disable_channel() -> None:
+    with SMBus(I2C_BUS) as bus:
+        bus.write_byte(PCA_ADDR, 0x00)
 
 
 def _load_font(key: str, size: int) -> ImageFont.FreeTypeFont:

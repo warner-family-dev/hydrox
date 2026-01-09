@@ -17,18 +17,31 @@
       <label class="form__label">Screen Name</label>
       <input class="form__input" type="text" name="name" placeholder="North Panel" required />
 
-      <label class="form__label">Message Template</label>
-      <input class="form__input" type="text" name="message_template" placeholder="Ambient: {{ambient_temp}}°C" required />
+      <label class="form__label">Title Template</label>
+      <input class="form__input" type="text" name="title_template" placeholder="FAN 3" required />
 
-      <label class="form__label">Font Family</label>
-      <select class="form__input" name="font_family" required data-font-select>
+      <label class="form__label">Value Template</label>
+      <input class="form__input" type="text" name="value_template" placeholder="{{fan3_rpm}}" required />
+
+      <label class="form__label">Title Font</label>
+      <select class="form__input" name="title_font_family" required data-font-select>
         {% for font in fonts %}
         <option value="{{ font.key }}" data-font-family="{{ font.key }}" style="font-family: '{{ font.key }}', sans-serif;" {% if font.key == 'DejaVu Sans Mono' %}selected{% endif %}>{{ font.label }}</option>
         {% endfor %}
       </select>
 
-      <label class="form__label">Font Size</label>
-      <input class="form__input" type="number" name="font_size" value="12" min="8" max="32" required />
+      <label class="form__label">Title Font Size</label>
+      <input class="form__input" type="number" name="title_font_size" value="16" min="8" max="32" required />
+
+      <label class="form__label">Value Font</label>
+      <select class="form__input" name="value_font_family" required data-font-select>
+        {% for font in fonts %}
+        <option value="{{ font.key }}" data-font-family="{{ font.key }}" style="font-family: '{{ font.key }}', sans-serif;" {% if font.key == 'DejaVu Sans Mono' %}selected{% endif %}>{{ font.label }}</option>
+        {% endfor %}
+      </select>
+
+      <label class="form__label">Value Font Size</label>
+      <input class="form__input" type="number" name="value_font_size" value="22" min="8" max="40" required />
 
       <label class="form__label">Rotation Interval (seconds)</label>
       <input class="form__input" type="number" name="rotation_seconds" value="15" min="5" max="600" required />
@@ -38,6 +51,14 @@
 
       <button class="button" type="submit">Save Screen</button>
     </form>
+    <div class="token-list">
+      <div class="token-list__title">Available tokens</div>
+      <div class="token-list__body">
+        {% for token in tokens %}
+        <div class="token-list__row"><span>{{ token.label }}</span><span class="token-list__token">{{ token.token }}</span></div>
+        {% endfor %}
+      </div>
+    </div>
   </div>
   <div class="panel">
     <div class="panel__header">
@@ -48,14 +69,52 @@
       {% if screens %}
         {% for screen in screens %}
         <div class="list__item">
-          <div class="list__title">{{ screen.name }}</div>
-          <div class="list__meta">{{ screen.created_at }}</div>
-          <div class="list__body">Message: {{ screen.message_template }}</div>
-          <div class="list__body">Font: {{ screen.font_family }} / {{ screen.font_size }}px</div>
-          <div class="list__body">Rotation: {{ screen.rotation_seconds }}s</div>
-          {% if screen.tag %}
-          <div class="list__body">Tag: {{ screen.tag }}</div>
-          {% endif %}
+          <form class="list__form" method="post" action="/screens/update">
+            <input type="hidden" name="screen_id" value="{{ screen.id }}" />
+            <label class="form__label">Screen Name</label>
+            <input class="form__input" type="text" name="name" value="{{ screen.name }}" required />
+
+            <label class="form__label">Title Template</label>
+            <input class="form__input" type="text" name="title_template" value="{{ screen.title_template or screen.name }}" required />
+
+            <label class="form__label">Value Template</label>
+            <input class="form__input" type="text" name="value_template" value="{{ screen.value_template or screen.message_template }}" required />
+
+            <label class="form__label">Title Font</label>
+            <select class="form__input" name="title_font_family" required>
+              {% for font in fonts %}
+              <option value="{{ font.key }}" {% if font.key == (screen.title_font_family or screen.font_family) %}selected{% endif %}>{{ font.label }}</option>
+              {% endfor %}
+            </select>
+
+            <label class="form__label">Title Font Size</label>
+            <input class="form__input" type="number" name="title_font_size" value="{{ screen.title_font_size or 16 }}" min="8" max="32" required />
+
+            <label class="form__label">Value Font</label>
+            <select class="form__input" name="value_font_family" required>
+              {% for font in fonts %}
+              <option value="{{ font.key }}" {% if font.key == (screen.value_font_family or screen.font_family) %}selected{% endif %}>{{ font.label }}</option>
+              {% endfor %}
+            </select>
+
+            <label class="form__label">Value Font Size</label>
+            <input class="form__input" type="number" name="value_font_size" value="{{ screen.value_font_size or screen.font_size }}" min="8" max="40" required />
+
+            <label class="form__label">Rotation Interval (seconds)</label>
+            <input class="form__input" type="number" name="rotation_seconds" value="{{ screen.rotation_seconds }}" min="5" max="600" required />
+
+            <label class="form__label">Tag (optional)</label>
+            <input class="form__input" type="text" name="tag" value="{{ screen.tag or '' }}" />
+
+            <div class="list__actions">
+              <button class="button button--ghost" type="submit">Update</button>
+              <button class="button button--ghost" type="submit" form="delete-screen-{{ screen.id }}">Delete</button>
+            </div>
+          </form>
+          <form id="delete-screen-{{ screen.id }}" method="post" action="/screens/delete">
+            <input type="hidden" name="screen_id" value="{{ screen.id }}" />
+          </form>
+          <div class="list__meta">Saved {{ screen.created_at }}</div>
           <form class="list__actions" method="post" action="/screens/publish">
             <input type="hidden" name="screen_id" value="{{ screen.id }}" />
             <select class="form__input" name="oled_channel" required>
@@ -63,6 +122,10 @@
               <option value="{{ oled.channel }}">{{ oled.label }}</option>
               {% endfor %}
             </select>
+            <label class="toggle toggle--inline">
+              <input type="checkbox" name="pixel_shift" checked />
+              <span>Pixel shift</span>
+            </label>
             <button class="button button--ghost" type="submit">Publish</button>
           </form>
         </div>
@@ -73,18 +136,33 @@
     </div>
   </div>
 </section>
+
+<section class="panel">
+  <div class="panel__header">
+    <h2>OLED Controls</h2>
+    <span class="panel__tag">Off</span>
+  </div>
+  <div class="list__actions">
+    {% for oled in oled_channels %}
+    <form method="post" action="/screens/off">
+      <input type="hidden" name="oled_channel" value="{{ oled.channel }}" />
+      <button class="button button--ghost" type="submit">Turn off {{ oled.label }}</button>
+    </form>
+    {% endfor %}
+  </div>
+</section>
 <script>
-  const fontSelect = document.querySelector('[data-font-select]');
-  if (fontSelect) {
+  const fontSelects = document.querySelectorAll('[data-font-select]');
+  fontSelects.forEach((select) => {
     const applyFont = () => {
-      const selected = fontSelect.selectedOptions[0];
+      const selected = select.selectedOptions[0];
       const family = selected?.getAttribute('data-font-family');
       if (family) {
-        fontSelect.style.fontFamily = `'${family}', sans-serif`;
+        select.style.fontFamily = `'${family}', sans-serif`;
       }
     };
     applyFont();
-    fontSelect.addEventListener('change', applyFont);
-  }
+    select.addEventListener('change', applyFont);
+  });
 </script>
 {% endblock %}
