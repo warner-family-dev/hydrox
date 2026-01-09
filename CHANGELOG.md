@@ -11,3 +11,4 @@
 - Remove legacy compose file version key for Docker Compose v2.
 - Switch `/data` to a named volume to avoid host permission issues.
 - Add logging strategy docs and initial build log entry.
+- Handle missing git binary gracefully on the Admin page.

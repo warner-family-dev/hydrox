@@ -49,6 +49,7 @@ The service listens on `http://localhost:8000`.
 - Liquidctl integration is staged and will be wired in as host-accessible commands.
 - Profiles are created first, then applied manually or via schedules.
 - Fan curves are stored per fan channel in the profile JSON and validated on save.
+- Admin metadata falls back to `unknown` when git is unavailable in the container.
 
 ## Logging
 

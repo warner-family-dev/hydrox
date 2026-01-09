@@ -12,7 +12,10 @@ def _run_git(args: list[str]) -> str:
     env = os.environ.copy()
     if git_dir:
         cmd.extend(["--git-dir", git_dir])
-    result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+    except FileNotFoundError:
+        return ""
     if result.returncode != 0:
         return ""
     return result.stdout.strip()
