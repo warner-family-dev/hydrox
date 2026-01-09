@@ -7,6 +7,7 @@ const fanGrid = document.getElementById('fan-grid');
 const fanLabels = document.getElementById('fan-labels');
 
 const fanPalette = ['#38bdf8', '#818cf8', '#f472b6', '#22c55e', '#eab308', '#f97316', '#a855f7'];
+const fanTiles = document.querySelectorAll('[data-fan-channel]');
 
 const metricFormatters = {
   cpu_temp: (value) => `${value}°C`,
@@ -180,6 +181,39 @@ const refreshFanChart = async () => {
   }
 };
 
+const refreshFanTiles = async () => {
+  if (!fanTiles.length) {
+    return;
+  }
+  try {
+    const response = await fetch('/api/fans/latest', { cache: 'no-store' });
+    if (!response.ok) {
+      return;
+    }
+    const data = await response.json();
+    const readings = data.fans || [];
+    const rpmMap = new Map(readings.map((row) => [String(row.channel_index), row.rpm]));
+    fanTiles.forEach((tile) => {
+      const channel = tile.getAttribute('data-fan-channel');
+      const valueEl = tile.querySelector('.fan-tile__value');
+      const subEl = tile.querySelector('.fan-tile__sub');
+      if (!channel || !valueEl || !subEl) {
+        return;
+      }
+      const rpm = rpmMap.get(channel);
+      if (rpm === undefined) {
+        valueEl.textContent = '-- RPM';
+        subEl.textContent = 'Awaiting live feed';
+        return;
+      }
+      valueEl.textContent = `${rpm} RPM`;
+      subEl.textContent = 'Live fan RPM';
+    });
+  } catch (error) {
+    // Ignore transient fetch failures.
+  }
+};
+
 toggles.forEach((toggle) => {
   toggle.addEventListener('change', (event) => {
     const targetId = event.target.getAttribute('data-target');
@@ -205,8 +239,10 @@ drawFanGrid();
 refreshMetrics();
 refreshTrend();
 refreshFanChart();
+refreshFanTiles();
 setInterval(() => {
   refreshMetrics();
   refreshTrend();
   refreshFanChart();
+  refreshFanTiles();
 }, 2000);

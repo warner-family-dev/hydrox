@@ -19,13 +19,21 @@
       <button class="button button--ghost" type="submit">Update Count</button>
     </div>
   </form>
-  <form class="settings-calibrate" method="post" action="/settings/fans/calibrate">
+  <form class="settings-calibrate" method="post" action="/settings/fans/calibrate" id="calibrate-form">
     <div class="settings-calibrate__body">
       <div class="settings-calibrate__title">Calibrate fan max RPM</div>
       <div class="settings-calibrate__note">Sets all fans to 100%, waits 15 seconds, reads RPM, then restores the active profile or 20%.</div>
     </div>
     <button class="button" type="submit">Calibrate</button>
   </form>
+  <div class="modal" id="calibrate-modal" aria-hidden="true">
+    <div class="modal__backdrop"></div>
+    <div class="modal__card">
+      <div class="modal__title">Wait for calibration to finish</div>
+      <div class="modal__timer">00:15</div>
+      <div class="modal__note">Calibration is running. This window will close when the timer ends.</div>
+    </div>
+  </div>
   <div class="settings-list">
     {% for fan in fans %}
     <form class="settings-row" method="post" action="/settings/fans">
@@ -44,4 +52,5 @@
     {% endfor %}
   </div>
 </section>
+<script src="/static/js/settings.js"></script>
 {% endblock %}

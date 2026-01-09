@@ -51,3 +51,15 @@ def recent_cpu_fan_readings(limit: int = 24):
             (limit,),
         ).fetchall()
         return [dict(row) for row in rows]
+
+
+def latest_fan_readings():
+    with get_connection() as conn:
+        rows = conn.execute(
+            """
+            SELECT channel_index, rpm, MAX(created_at) AS created_at
+            FROM fan_readings
+            GROUP BY channel_index
+            """
+        ).fetchall()
+        return [dict(row) for row in rows]

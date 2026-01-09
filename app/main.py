@@ -12,6 +12,7 @@ from app.services.cpu_fan import read_cpu_fan_rpm
 from app.services.fan_metrics import (
     insert_cpu_fan_reading,
     insert_fan_reading,
+    latest_fan_readings,
     recent_cpu_fan_readings,
     recent_fan_readings,
 )
@@ -317,6 +318,11 @@ def get_fan_percent(limit: int = 24):
             }
         }
     )
+
+
+@app.get("/api/fans/latest")
+def get_latest_fan_rpms():
+    return JSONResponse({"fans": latest_fan_readings()})
 
 
 def _load_profiles():

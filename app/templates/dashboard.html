@@ -43,7 +43,7 @@
     </div>
     <div class="fan-grid">
       {% for fan in fans %}
-      <div class="fan-tile">
+      <div class="fan-tile" data-fan-channel="{{ fan.channel_index }}">
         <div class="fan-tile__title">{{ fan.name }}</div>
         <div class="fan-tile__value">-- RPM</div>
         <div class="fan-tile__sub">Awaiting live feed</div>
