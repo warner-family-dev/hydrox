@@ -58,5 +58,6 @@ The service listens on `http://localhost:8000`.
 
 - Build logs are stored in `logs/builds/`.
 - Build logs include the local datetime of the run.
+- Build logs record early failures such as missing packages.
 - Runtime logs are kept in Docker for now (use `docker compose logs -f`).
 - See `docs/logging.md` for the full plan.

@@ -1,0 +1,59 @@
+Command: docker compose up --build
+Local datetime: 2026-01-08 21:37:06 -0600
+Result: failed
+
+Output:
+[+] Building 5.1s (8/11)
+ => [internal] load local bake definitions                                                          0.0s
+ => => reading from stdin 502B                                                                      0.0s
+ => [internal] load build definition from Dockerfile                                                0.0s
+ => => transferring dockerfile: 669B                                                                0.0s
+ => [internal] load metadata for docker.io/library/python:3.11-slim                                 0.2s
+ => [internal] load .dockerignore                                                                   0.0s
+ => => transferring context: 186B                                                                   0.0s
+ => [internal] load build context                                                                   0.0s
+ => => transferring context: 890B                                                                   0.0s
+ => [1/6] FROM docker.io/library/python:3.11-slim@sha256:1dd3dca85e22886e44fcad1bb7ccab6691dfa83db  0.0s
+ => => resolve docker.io/library/python:3.11-slim@sha256:1dd3dca85e22886e44fcad1bb7ccab6691dfa83db  0.0s
+ => CACHED [2/6] WORKDIR /opt/hydrox                                                                0.0s
+ => ERROR [3/6] RUN apt-get update     && apt-get install -y --no-install-recommends git libraspbe  4.6s
+------
+ > [3/6] RUN apt-get update     && apt-get install -y --no-install-recommends git libraspberrypi-bin     && rm -rf /var/lib/apt/lists/*     && adduser --disabled-password --gecos '' appuser     && mkdir -p /data /opt/hydrox     && chown -R appuser:appuser /data /opt/hydrox:
+0.291 Hit:1 http://deb.debian.org/debian trixie InRelease
+0.291 Get:2 http://deb.debian.org/debian trixie-updates InRelease [47.3 kB]
+0.295 Get:3 http://deb.debian.org/debian-security trixie-security InRelease [43.4 kB]
+0.327 Get:4 http://deb.debian.org/debian trixie/main arm64 Packages [9607 kB]
+0.969 Get:5 http://deb.debian.org/debian trixie-updates/main arm64 Packages [5404 B]
+0.971 Get:6 http://deb.debian.org/debian-security trixie-security/main arm64 Packages [94.8 kB]
+2.232 Fetched 9798 kB in 2s (4940 kB/s)
+2.232 Reading package lists...
+3.135 Reading package lists...
+4.235 Building dependency tree...
+4.470 Reading state information...
+4.519 E: Unable to locate package libraspberrypi-bin
+------
+[+] up 0/1
+ ⠙ Image hydrox-hydrox Building                                                                     5.2s
+Dockerfile:9
+
+--------------------
+
+   8 |
+
+   9 | >>> RUN apt-get update \
+
+  10 | >>>     && apt-get install -y --no-install-recommends git libraspberrypi-bin \
+
+  11 | >>>     && rm -rf /var/lib/apt/lists/* \
+
+  12 | >>>     && adduser --disabled-password --gecos '' appuser \
+
+  13 | >>>     && mkdir -p /data ${APP_HOME} \
+
+  14 | >>>     && chown -R appuser:appuser /data ${APP_HOME}
+
+  15 |
+
+--------------------
+
+failed to solve: process "/bin/sh -c apt-get update     && apt-get install -y --no-install-recommends git libraspberrypi-bin     && rm -rf /var/lib/apt/lists/*     && adduser --disabled-password --gecos '' appuser     && mkdir -p /data ${APP_HOME}     && chown -R appuser:appuser /data ${APP_HOME}" did not complete successfully: exit code: 100

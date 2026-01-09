@@ -18,3 +18,4 @@
 - Sample CPU temp via `vcgencmd` in a background thread.
 - Add local datetime to build logs.
 - Install `libraspberrypi-bin` in the container to enable `vcgencmd`.
+- Add build log entry for the missing `libraspberrypi-bin` package error.
