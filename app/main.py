@@ -586,6 +586,47 @@ def get_latest_fan_rpms():
     return JSONResponse({"fans": latest_fan_readings()})
 
 
+@app.post("/api/fans/manual")
+def set_manual_fan_speed(
+    channel_index: int = Form(...),
+    mode: str = Form(...),
+    value: int = Form(...),
+):
+    fans = list_fans(active_only=True)
+    fan = next((item for item in fans if item["channel_index"] == channel_index), None)
+    if not fan:
+        return JSONResponse({"ok": False, "error": "Fan channel not found."}, status_code=404)
+    if mode not in {"percent", "rpm"}:
+        return JSONResponse({"ok": False, "error": "Invalid control mode."}, status_code=400)
+    if value < 0:
+        return JSONResponse({"ok": False, "error": "Value must be a whole number."}, status_code=400)
+
+    percent = None
+    if mode == "percent":
+        if value > 100:
+            return JSONResponse({"ok": False, "error": "Percent must be 0-100."}, status_code=400)
+        percent = value
+    else:
+        max_rpm = fan.get("max_rpm")
+        if not max_rpm:
+            return JSONResponse(
+                {"ok": False, "error": "RPM control requires a calibrated max RPM."},
+                status_code=400,
+            )
+        if value > max_rpm:
+            return JSONResponse(
+                {"ok": False, "error": f"RPM cannot exceed {max_rpm}."},
+                status_code=400,
+            )
+        if max_rpm <= 0:
+            return JSONResponse({"ok": False, "error": "Invalid max RPM."}, status_code=400)
+        percent = max(0, min(100, round(value / max_rpm * 100)))
+
+    if not set_fan_speed(channel_index, int(percent)):
+        return JSONResponse({"ok": False, "error": "Failed to update fan speed."}, status_code=500)
+    return JSONResponse({"ok": True, "percent": percent})
+
+
 @app.get("/api/calibration/status")
 def get_calibration_status():
     return JSONResponse(_calibration_status_payload())
