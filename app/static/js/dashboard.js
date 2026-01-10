@@ -36,6 +36,42 @@ const modalState = {
   mode: 'percent',
 };
 
+const clampValue = (value, min, max) => Math.min(Math.max(value, min), max);
+
+const updateComputedDisplay = (input, value) => {
+  if (!input) {
+    return;
+  }
+  if (value === null || Number.isNaN(value)) {
+    input.value = '';
+    input.placeholder = '--';
+    return;
+  }
+  input.value = String(value);
+  input.placeholder = '';
+};
+
+const syncComputedValues = () => {
+  if (modalState.mode === 'percent') {
+    const percent = Number.parseInt(fanModalPercent?.value || '', 10);
+    if (!modalState.maxRpm || Number.isNaN(percent)) {
+      updateComputedDisplay(fanModalRpm, null);
+      return;
+    }
+    const clamped = clampValue(percent, 0, 100);
+    const rpm = Math.round((modalState.maxRpm * clamped) / 100);
+    updateComputedDisplay(fanModalRpm, rpm);
+    return;
+  }
+  const rpm = Number.parseInt(fanModalRpm?.value || '', 10);
+  if (!modalState.maxRpm || Number.isNaN(rpm)) {
+    updateComputedDisplay(fanModalPercent, null);
+    return;
+  }
+  const percent = Math.round((rpm / modalState.maxRpm) * 100);
+  updateComputedDisplay(fanModalPercent, clampValue(percent, 0, 100));
+};
+
 const openFanModal = (tile) => {
   if (!fanModal) {
     return;
@@ -53,8 +89,10 @@ const openFanModal = (tile) => {
   }
   if (fanModalRpm) {
     fanModalRpm.value = modalState.maxRpm ? String(modalState.maxRpm) : '0';
+    fanModalRpm.placeholder = modalState.maxRpm ? '' : '--';
   }
   updateModeState();
+  syncComputedValues();
   hideModalError();
   fanModal.classList.add('modal--open');
   fanModal.setAttribute('aria-hidden', 'false');
@@ -106,6 +144,7 @@ const updateModeState = () => {
       fanModalNote.textContent = 'Manual overrides can be replaced by profiles.';
     }
   }
+  syncComputedValues();
 };
 
 const metricFormatters = {
@@ -409,6 +448,18 @@ fanModal?.querySelectorAll('[data-modal-close]').forEach((button) => {
 });
 
 fanModalCancel?.addEventListener('click', closeFanModal);
+
+fanModalPercent?.addEventListener('input', () => {
+  if (modalState.mode === 'percent') {
+    syncComputedValues();
+  }
+});
+
+fanModalRpm?.addEventListener('input', () => {
+  if (modalState.mode === 'rpm') {
+    syncComputedValues();
+  }
+});
 
 fanModalSave?.addEventListener('click', async () => {
   hideModalError();

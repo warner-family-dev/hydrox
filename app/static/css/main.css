@@ -531,6 +531,12 @@ body {
   resize: vertical;
 }
 
+.form__input:disabled,
+.form__textarea:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .button {
   background: var(--accent);
   color: #081019;
