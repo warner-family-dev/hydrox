@@ -102,3 +102,29 @@ def update_fan_max_rpm(channel_index: int, max_rpm: int) -> None:
             (max_rpm, channel_index),
         )
         conn.commit()
+
+
+def set_fan_name_by_channel(channel_index: int, name: str) -> None:
+    with get_connection() as conn:
+        conn.execute(
+            """
+            UPDATE fan_channels
+            SET name = ?
+            WHERE channel_index = ?
+            """,
+            (name, channel_index),
+        )
+        conn.commit()
+
+
+def reset_fan_name_to_default(channel_index: int) -> None:
+    with get_connection() as conn:
+        conn.execute(
+            """
+            UPDATE fan_channels
+            SET name = default_name
+            WHERE channel_index = ?
+            """,
+            (channel_index,),
+        )
+        conn.commit()

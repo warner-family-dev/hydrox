@@ -17,12 +17,13 @@ const renderWifi = (wifi) => {
     return;
   }
   const percent = Math.max(0, Math.min(100, wifi.percent));
+  const signal = wifi.signal_dbm !== null && wifi.signal_dbm !== undefined ? `${wifi.signal_dbm} dBm · ` : "";
   container.innerHTML = `
     <div class="wifi-meter">
       <div class="wifi-meter__bar">
         <div class="wifi-meter__fill" style="width: ${percent}%;"></div>
       </div>
-      <div class="wifi-meter__label">${percent}% (${wifi.label})</div>
+      <div class="wifi-meter__label">${signal}${percent}% (${wifi.label})</div>
     </div>
   `;
 };

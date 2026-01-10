@@ -13,9 +13,16 @@ from app.services.fan_metrics import (
     recent_cpu_fan_readings,
     recent_fan_readings,
 )
-from app.services.fans import list_fans, seed_fans_if_empty, sync_fan_count, update_fan_settings
+from app.services.fans import (
+    list_fans,
+    reset_fan_name_to_default,
+    seed_fans_if_empty,
+    set_fan_name_by_channel,
+    sync_fan_count,
+    update_fan_settings,
+)
 from app.services.git_info import get_git_status
-from app.services.liquidctl import set_fan_speed
+from app.services.liquidctl import has_liquidctl_devices, set_fan_speed
 from app.services.logger import get_logger, now_local
 from app.services.metrics import (
     latest_metrics,
@@ -34,10 +41,14 @@ from app.services.sensors import (
 )
 from app.services.settings import (
     get_active_profile_id,
+    get_fan_pwm,
     get_fan_count,
+    get_pump_channel,
     seed_settings_if_empty,
     set_active_profile_id,
+    set_fan_pwm,
     set_fan_count,
+    set_pump_channel,
 )
 from app.services.daemon import start_daemon
 from app.services.system_status import get_status_payload, set_image_start_time
@@ -45,6 +56,9 @@ from app.services.system_status import get_status_payload, set_image_start_time
 app = FastAPI(title="Hydrox Command Center")
 
 _cpu_fan_missing_logged = False
+_ADMIN_PASSWORD = "admin"
+_PUMP_MIN_RPM = 800
+_PUMP_MAX_RPM = 4800
 _calibration_lock = threading.Lock()
 _calibration_state = {
     "running": False,
@@ -99,7 +113,14 @@ def root() -> RedirectResponse:
 @app.get("/dashboard", response_class=HTMLResponse)
 def dashboard(request: Request):
     metrics = latest_metrics()
+    cpu_fan_percent = None
+    cpu_fan_rows = recent_cpu_fan_readings(limit=1)
+    if cpu_fan_rows:
+        rpm = cpu_fan_rows[0]["rpm"]
+        cpu_fan_percent = int(max(0, min(100, round(rpm / 8000 * 100))))
     fans = list_fans(active_only=True)
+    pump_channel = get_pump_channel()
+    liquidctl_status = "Connected" if has_liquidctl_devices() else "Not connected"
     sensors = list_sensors()
     readings = latest_sensor_readings()
     sensor_cards = []
@@ -117,8 +138,11 @@ def dashboard(request: Request):
         {
             "request": request,
             "metrics": metrics,
+            "cpu_fan_percent": cpu_fan_percent,
             "fans": fans,
+            "pump_channel": pump_channel,
             "sensors": sensor_cards,
+            "liquidctl_status": liquidctl_status,
         },
     )
 
@@ -452,6 +476,7 @@ def admin_status():
 def settings(request: Request):
     fans = list_fans()
     fan_count = get_fan_count()
+    pump_channel = get_pump_channel()
     sensors = list_sensors()
     return templates.TemplateResponse(
         "settings.html",
@@ -459,6 +484,7 @@ def settings(request: Request):
             "request": request,
             "fans": fans,
             "fan_count": fan_count,
+            "pump_channel": pump_channel,
             "sensors": sensors,
         },
     )
@@ -480,6 +506,23 @@ def update_fan(fan_id: int = Form(...), name: str = Form(...), max_rpm: str | No
 def update_fan_count(fan_count: int = Form(...)):
     set_fan_count(fan_count)
     sync_fan_count(get_fan_count())
+    return RedirectResponse("/settings", status_code=303)
+
+
+@app.post("/settings/pump")
+def update_pump_channel(pump_channel: str = Form("none")):
+    previous = get_pump_channel()
+    new_channel = None
+    if pump_channel and pump_channel != "none":
+        try:
+            new_channel = int(pump_channel)
+        except ValueError:
+            new_channel = None
+    if previous and previous != new_channel:
+        reset_fan_name_to_default(previous)
+    if new_channel is not None:
+        set_fan_name_by_channel(new_channel, "Pump")
+    set_pump_channel(new_channel)
     return RedirectResponse("/settings", status_code=303)
 
 
@@ -511,7 +554,14 @@ def ingest_metrics(
 
 @app.get("/api/metrics/latest")
 def get_latest_metrics():
-    return JSONResponse(latest_metrics() or {})
+    metrics = latest_metrics() or {}
+    cpu_fan_percent = None
+    cpu_fan_rows = recent_cpu_fan_readings(limit=1)
+    if cpu_fan_rows:
+        rpm = cpu_fan_rows[0]["rpm"]
+        cpu_fan_percent = int(max(0, min(100, round(rpm / 8000 * 100))))
+    metrics["cpu_fan_percent"] = cpu_fan_percent
+    return JSONResponse(metrics)
 
 
 @app.get("/api/metrics/recent")
@@ -592,9 +642,15 @@ def set_manual_fan_speed(
     channel_index: int = Form(...),
     mode: str = Form(...),
     value: int = Form(...),
+    admin_password: str = Form(""),
 ):
     logger = get_logger()
     min_rpm = 250
+    pump_channel = get_pump_channel()
+    is_pump = pump_channel is not None and channel_index == pump_channel
+    if is_pump:
+        if admin_password != _ADMIN_PASSWORD:
+            return JSONResponse({"ok": False, "error": "Admin password required."}, status_code=403)
     fans = list_fans(active_only=True)
     fan = next((item for item in fans if item["channel_index"] == channel_index), None)
     if not fan:
@@ -608,21 +664,29 @@ def set_manual_fan_speed(
     if mode == "percent":
         if value > 100:
             return JSONResponse({"ok": False, "error": "Percent must be 0-100."}, status_code=400)
-        if value > 0 and fan.get("max_rpm"):
-            max_rpm = fan["max_rpm"]
-            if max_rpm and max_rpm > 0:
-                min_percent = min(100, int((min_rpm * 100 + max_rpm - 1) / max_rpm))
+        if value > 0:
+            if is_pump:
+                min_percent = min(100, int((_PUMP_MIN_RPM * 100 + _PUMP_MAX_RPM - 1) / _PUMP_MAX_RPM))
                 if value < min_percent:
                     value = min_percent
+            elif fan.get("max_rpm"):
+                max_rpm = fan["max_rpm"]
+                if max_rpm and max_rpm > 0:
+                    min_percent = min(100, int((min_rpm * 100 + max_rpm - 1) / max_rpm))
+                    if value < min_percent:
+                        value = min_percent
         percent = value
     else:
-        max_rpm = fan.get("max_rpm")
+        max_rpm = _PUMP_MAX_RPM if is_pump else fan.get("max_rpm")
         if not max_rpm:
             return JSONResponse(
                 {"ok": False, "error": "RPM control requires a calibrated max RPM."},
                 status_code=400,
             )
-        if value > 0 and value < min_rpm:
+        if is_pump:
+            if value > 0 and value < _PUMP_MIN_RPM:
+                value = _PUMP_MIN_RPM
+        elif value > 0 and value < min_rpm:
             value = min_rpm
         if value > max_rpm:
             return JSONResponse(
@@ -633,7 +697,7 @@ def set_manual_fan_speed(
             return JSONResponse({"ok": False, "error": "Invalid max RPM."}, status_code=400)
         percent = max(0, min(100, round(value / max_rpm * 100)))
 
-    if not set_fan_speed(channel_index, int(percent)):
+    if not _set_fan_speed(channel_index, int(percent)):
         logger.error(
             "manual fan override failed channel=%s mode=%s value=%s percent=%s",
             channel_index,
@@ -690,7 +754,7 @@ def _run_calibration() -> None:
             }
         )
     for fan in fans:
-        set_fan_speed(fan["channel_index"], 100)
+        _set_fan_speed(fan["channel_index"], 100)
     time.sleep(_CALIBRATION_SECONDS)
     rpms = get_fan_rpms()
     if not rpms:
@@ -745,24 +809,24 @@ def _restore_after_calibration(fans: list[dict]) -> None:
     active_profile_id = get_active_profile_id()
     if active_profile_id is None:
         for fan in fans:
-            set_fan_speed(fan["channel_index"], 20)
+            _set_fan_speed(fan["channel_index"], 20)
         return
     profile = _load_profile(active_profile_id)
     if not profile:
         logger.error("active profile %s not found, defaulting to 20%%", active_profile_id)
         for fan in fans:
-            set_fan_speed(fan["channel_index"], 20)
+            _set_fan_speed(fan["channel_index"], 20)
         return
     cpu_temp = read_cpu_temp_vcgencmd()
     if cpu_temp is None:
         logger.error("cpu temp unavailable, defaulting to 20%%")
         for fan in fans:
-            set_fan_speed(fan["channel_index"], 20)
+            _set_fan_speed(fan["channel_index"], 20)
         return
     speeds = _fan_speeds_from_profile(profile["curve_json"], cpu_temp, fans)
     for fan in fans:
         speed = speeds.get(fan["channel_index"], 20)
-        set_fan_speed(fan["channel_index"], speed)
+        _set_fan_speed(fan["channel_index"], speed)
 
 
 def _load_profile(profile_id: int):
@@ -825,6 +889,13 @@ def _fan_series_from_readings(limit: int, max_rpm_map: dict[int, int]) -> dict[s
     return series
 
 
+def _set_fan_speed(channel_index: int, percent: int) -> bool:
+    if not set_fan_speed(channel_index, percent):
+        return False
+    set_fan_pwm(channel_index, percent)
+    return True
+
+
 def _cpu_fan_series(limit: int, max_rpm: int) -> list[float]:
     readings = recent_cpu_fan_readings(limit)
     rpms = [row["rpm"] for row in reversed(readings)]
@@ -833,7 +904,7 @@ def _cpu_fan_series(limit: int, max_rpm: int) -> list[float]:
 
 def _pump_series(limit: int) -> list[float]:
     rows = recent_metrics(limit=limit)
-    return [row["pump_percent"] for row in rows]
+    return [row["pump_percent"] for row in rows if row["pump_percent"] is not None]
 
 
 def _validate_profile_json(curve_json: str, schedule_json: str) -> str | None:

@@ -10,6 +10,7 @@ from app.services.metrics import (
     insert_metrics,
     latest_metrics,
     read_cpu_temp_vcgencmd,
+    read_nvme_temp_sensors,
 )
 from app.services.sensors import (
     insert_sensor_reading,
@@ -17,6 +18,7 @@ from app.services.sensors import (
     refresh_liquid_sensors,
     sync_ds18b20_sensors,
 )
+from app.services.settings import get_fan_pwm, get_pump_channel
 from app.services.system_status import _read_wifi_strength, set_wifi_cache
 
 _daemon_started = False
@@ -39,9 +41,15 @@ def _cpu_sampler() -> None:
         cpu_temp = read_cpu_temp_vcgencmd()
         if cpu_temp is not None:
             latest = latest_metrics() or {}
-            ambient_temp = latest.get("ambient_temp", DEFAULT_METRICS["ambient_temp"])
+            nvme_temp = read_nvme_temp_sensors()
+            ambient_temp = nvme_temp if nvme_temp is not None else latest.get(
+                "ambient_temp", DEFAULT_METRICS["ambient_temp"]
+            )
             fan_rpm = latest.get("fan_rpm", DEFAULT_METRICS["fan_rpm"])
-            pump_percent = latest.get("pump_percent", DEFAULT_METRICS["pump_percent"])
+            pump_channel = get_pump_channel()
+            pump_percent = None
+            if pump_channel is not None:
+                pump_percent = get_fan_pwm(pump_channel)
             insert_metrics(cpu_temp, ambient_temp, fan_rpm, pump_percent)
         time.sleep(5)
 

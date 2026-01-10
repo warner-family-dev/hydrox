@@ -7,8 +7,8 @@
   </div>
   <div class="status-card">
     <div class="status-card__label">System Pulse</div>
-    <div class="status-card__value">Nominal</div>
-    <div class="status-card__sub">Awaiting liquidctl integration</div>
+    <div class="status-card__value">Liquidctl</div>
+    <div class="status-card__sub">{{ liquidctl_status }}</div>
   </div>
 </section>
 
@@ -19,18 +19,22 @@
     <div class="metric-card__sub">Pi core</div>
   </div>
   <div class="metric-card">
-    <div class="metric-card__label">Ambient Temp</div>
+    <div class="metric-card__label">970 Pro SSD Temp</div>
     <div class="metric-card__value" data-metric="ambient_temp">{{ metrics.ambient_temp if metrics else "--" }}°C</div>
-    <div class="metric-card__sub">I2C sensors</div>
+    <div class="metric-card__sub">NVMe drive</div>
   </div>
   <div class="metric-card">
-    <div class="metric-card__label">Fan RPM</div>
-    <div class="metric-card__value" data-metric="fan_rpm">{{ metrics.fan_rpm if metrics else "--" }}</div>
-    <div class="metric-card__sub">Aggregate sample</div>
+    <div class="metric-card__label">CPU Fan %</div>
+    <div class="metric-card__value" data-metric="cpu_fan_percent">
+      {% if cpu_fan_percent is not none %}{{ cpu_fan_percent }}%{% else %}--{% endif %}
+    </div>
+    <div class="metric-card__sub">Percent of 8000 RPM</div>
   </div>
   <div class="metric-card">
     <div class="metric-card__label">Pump %</div>
-    <div class="metric-card__value" data-metric="pump_percent">{{ metrics.pump_percent if metrics else "--" }}%</div>
+    <div class="metric-card__value" data-metric="pump_percent">
+      {% if metrics and metrics.pump_percent is not none %}{{ metrics.pump_percent }}%{% else %}--{% endif %}
+    </div>
     <div class="metric-card__sub">Remote PWM board</div>
   </div>
 </section>
@@ -63,7 +67,7 @@
       </label>
       <label class="toggle">
         <input type="checkbox" data-target="ambient-line" checked />
-        <span>Ambient</span>
+        <span>970 Pro SSD</span>
       </label>
       {% for sensor in sensors %}
       <label class="toggle" data-series="sensor_{{ sensor.id }}">
@@ -72,7 +76,6 @@
       </label>
       {% endfor %}
     </div>
-    <div class="legend" data-legend="temperature"></div>
     <div class="trend">
       <div class="trend__axis trend__axis--y">Temperature (°C)</div>
       <div class="trend__axis trend__axis--x">Samples (oldest → newest)</div>
@@ -105,7 +108,7 @@
     </div>
     <div class="fan-grid">
       {% for fan in fans %}
-      <div class="fan-tile" data-fan-channel="{{ fan.channel_index }}" data-fan-name="{{ fan.name }}" data-fan-max-rpm="{{ fan.max_rpm if fan.max_rpm else '' }}">
+      <div class="fan-tile" data-fan-channel="{{ fan.channel_index }}" data-fan-name="{{ fan.name }}" data-fan-max-rpm="{{ fan.max_rpm if fan.max_rpm else '' }}" data-is-pump="{{ 'true' if pump_channel == fan.channel_index else 'false' }}">
         <div class="fan-tile__title">{{ fan.name }}</div>
         <div class="fan-tile__value">-- RPM</div>
         <div class="fan-tile__sub">Awaiting live feed</div>
@@ -134,7 +137,6 @@
         <span>Pump</span>
       </label>
     </div>
-    <div class="legend" data-legend="fan"></div>
     <div class="trend">
       <div class="trend__axis trend__axis--y">Output (%)</div>
       <div class="trend__axis trend__axis--x">Samples (oldest → newest)</div>
@@ -178,6 +180,11 @@
 
       <label class="form__label" for="fan-rpm-input">Target RPM</label>
       <input class="form__input" id="fan-rpm-input" type="number" min="0" step="1" value="0" data-input-rpm />
+
+      <div class="modal__row modal__row--hidden" data-pump-auth>
+        <label class="form__label" for="fan-admin-password">Admin password</label>
+        <input class="form__input" id="fan-admin-password" type="password" placeholder="admin" data-admin-password />
+      </div>
 
       <div class="modal__note" data-modal-note></div>
       <div class="modal__error" data-modal-error></div>

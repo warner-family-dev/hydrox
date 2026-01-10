@@ -1,7 +1,10 @@
+import json
 import os
 import shutil
 import subprocess
 import time
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 from app.services.liquidctl import has_liquidctl_devices
@@ -139,6 +142,12 @@ def get_wifi_strength(interface: str = "wlan0") -> dict:
 def _read_wifi_strength(interface: str = "wlan0") -> dict:
     logger = get_logger()
     desired = os.getenv("HYDROX_WIFI_INTERFACE", interface)
+    exporter_result = _read_wifi_exporter(desired)
+    if exporter_result is not None:
+        return exporter_result
+    iw_result = _read_iw_signal(desired)
+    if iw_result is not None:
+        return iw_result
     wpa_result = _read_wpa_signal(desired)
     if wpa_result is not None:
         return wpa_result
@@ -209,17 +218,21 @@ _wifi_parse_logged = False
 _wifi_missing_logged = False
 _wifi_sys_missing_logged = False
 _wifi_wpa_missing_logged = False
+_wifi_iw_missing_logged = False
+_wifi_exporter_logged = False
 
 
 def _log_wifi_once(flag_name: str, message: str, *args: object) -> None:
     global _wifi_proc_missing_logged, _wifi_parse_logged, _wifi_missing_logged, _wifi_sys_missing_logged
-    global _wifi_wpa_missing_logged
+    global _wifi_wpa_missing_logged, _wifi_iw_missing_logged, _wifi_exporter_logged
     flags = {
         "_wifi_proc_missing_logged": _wifi_proc_missing_logged,
         "_wifi_parse_logged": _wifi_parse_logged,
         "_wifi_missing_logged": _wifi_missing_logged,
         "_wifi_sys_missing_logged": _wifi_sys_missing_logged,
         "_wifi_wpa_missing_logged": _wifi_wpa_missing_logged,
+        "_wifi_iw_missing_logged": _wifi_iw_missing_logged,
+        "_wifi_exporter_logged": _wifi_exporter_logged,
     }
     if flags.get(flag_name):
         return
@@ -234,6 +247,10 @@ def _log_wifi_once(flag_name: str, message: str, *args: object) -> None:
         _wifi_sys_missing_logged = True
     elif flag_name == "_wifi_wpa_missing_logged":
         _wifi_wpa_missing_logged = True
+    elif flag_name == "_wifi_iw_missing_logged":
+        _wifi_iw_missing_logged = True
+    elif flag_name == "_wifi_exporter_logged":
+        _wifi_exporter_logged = True
 
 
 def _read_sysfs_wifi(interface: str) -> dict | None:
@@ -267,6 +284,37 @@ def _read_sysfs_wifi(interface: str) -> dict | None:
     return {"label": _wifi_label(percent), "percent": percent, "interface": interface}
 
 
+def _read_wifi_exporter(interface: str) -> dict | None:
+    url = os.getenv("HYDROX_WIFI_EXPORTER_URL")
+    if not url:
+        return None
+    try:
+        with urllib.request.urlopen(url, timeout=2) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except (urllib.error.URLError, ValueError, json.JSONDecodeError) as exc:
+        _log_wifi_once("_wifi_exporter_logged", "wifi exporter unavailable: %s", exc)
+        return None
+    percent = payload.get("percent")
+    if percent is None:
+        return {"label": "unknown", "percent": None, "interface": payload.get("interface", interface)}
+    try:
+        percent_value = int(percent)
+    except (TypeError, ValueError):
+        _log_wifi_once("_wifi_exporter_logged", "wifi exporter parse error: invalid percent")
+        return None
+    signal_dbm = payload.get("signal_dbm")
+    try:
+        signal_dbm = int(signal_dbm) if signal_dbm is not None else None
+    except (TypeError, ValueError):
+        signal_dbm = None
+    return {
+        "label": _wifi_label(percent_value),
+        "percent": max(0, min(100, percent_value)),
+        "interface": payload.get("interface", interface),
+        "signal_dbm": signal_dbm,
+    }
+
+
 def _read_wpa_signal(interface: str) -> dict | None:
     socket_path = os.getenv("HYDROX_WIFI_WPA_PATH", "/host-run/wpa_supplicant")
     try:
@@ -296,7 +344,50 @@ def _read_wpa_signal(interface: str) -> dict | None:
         )
         return None
     percent = _signal_to_percent(rssi)
-    return {"label": _wifi_label(percent), "percent": percent, "interface": interface}
+    return {
+        "label": _wifi_label(percent),
+        "percent": percent,
+        "interface": interface,
+        "signal_dbm": rssi,
+    }
+
+
+def _read_iw_signal(interface: str) -> dict | None:
+    try:
+        result = subprocess.run(
+            ["iw", "dev", interface, "link"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except FileNotFoundError:
+        _log_wifi_once("_wifi_iw_missing_logged", "wifi strength unavailable: iw not installed")
+        return None
+    if result.returncode != 0:
+        _log_wifi_once(
+            "_wifi_iw_missing_logged",
+            "wifi strength unavailable: iw failed for %s: %s",
+            interface,
+            result.stderr.strip() or result.stdout.strip(),
+        )
+        return None
+    if "Not connected." in result.stdout:
+        return {"label": "unknown", "percent": None, "interface": interface}
+    signal = _parse_iw_signal(result.stdout)
+    if signal is None:
+        _log_wifi_once(
+            "_wifi_parse_logged",
+            "wifi strength parse error: iw missing signal for %s",
+            interface,
+        )
+        return None
+    percent = _signal_to_percent(signal)
+    return {
+        "label": _wifi_label(percent),
+        "percent": percent,
+        "interface": interface,
+        "signal_dbm": signal,
+    }
 
 
 def _parse_wpa_signal(output: str) -> int | None:

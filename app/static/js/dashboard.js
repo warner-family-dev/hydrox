@@ -5,8 +5,6 @@ const grid = document.getElementById('trend-grid');
 const labels = document.getElementById('trend-labels');
 const fanGrid = document.getElementById('fan-grid');
 const fanLabels = document.getElementById('fan-labels');
-const tempLegend = document.querySelector('[data-legend="temperature"]');
-const fanLegend = document.querySelector('[data-legend="fan"]');
 const tempTooltip = document.querySelector('[data-tooltip="temperature"]');
 const fanTooltip = document.querySelector('[data-tooltip="fan"]');
 const tempChart = document.querySelector('[data-chart="temperature"]');
@@ -25,6 +23,8 @@ const fanModalNote = fanModal?.querySelector('[data-modal-note]');
 const fanModalError = fanModal?.querySelector('[data-modal-error]');
 const fanModalPercent = fanModal?.querySelector('[data-input-percent]');
 const fanModalRpm = fanModal?.querySelector('[data-input-rpm]');
+const fanModalPassword = fanModal?.querySelector('[data-admin-password]');
+const fanModalPumpAuth = fanModal?.querySelector('[data-pump-auth]');
 const fanModalSave = fanModal?.querySelector('[data-modal-save]');
 const fanModalCancel = fanModal?.querySelector('[data-modal-cancel]');
 const modeButtons = fanModal?.querySelectorAll('[data-mode]') || [];
@@ -34,9 +34,12 @@ const modalState = {
   name: '',
   maxRpm: null,
   mode: 'percent',
+  isPump: false,
 };
 
 const MIN_RPM = 250;
+const PUMP_MIN_RPM = 800;
+const PUMP_MAX_RPM = 4800;
 
 const clampValue = (value, min, max) => Math.min(Math.max(value, min), max);
 
@@ -54,27 +57,37 @@ const updateComputedDisplay = (input, value) => {
 };
 
 const syncComputedValues = () => {
+  const effectiveMax = modalState.isPump ? PUMP_MAX_RPM : modalState.maxRpm;
   if (modalState.mode === 'percent') {
     const percent = Number.parseInt(fanModalPercent?.value || '', 10);
-    if (!modalState.maxRpm || Number.isNaN(percent)) {
+    if (!effectiveMax || Number.isNaN(percent)) {
       updateComputedDisplay(fanModalRpm, null);
       return;
     }
     const clamped = clampValue(percent, 0, 100);
-    let rpm = Math.round((modalState.maxRpm * clamped) / 100);
-    if (clamped > 0 && rpm < MIN_RPM) {
+    let rpm = Math.round((effectiveMax * clamped) / 100);
+    if (modalState.isPump) {
+      if (clamped > 0 && rpm < PUMP_MIN_RPM) {
+        rpm = PUMP_MIN_RPM;
+      }
+    } else if (clamped > 0 && rpm < MIN_RPM) {
       rpm = MIN_RPM;
     }
     updateComputedDisplay(fanModalRpm, rpm);
     return;
   }
   const rpm = Number.parseInt(fanModalRpm?.value || '', 10);
-  if (!modalState.maxRpm || Number.isNaN(rpm)) {
+  if (!effectiveMax || Number.isNaN(rpm)) {
     updateComputedDisplay(fanModalPercent, null);
     return;
   }
-  const rpmForCalc = rpm > 0 && rpm < MIN_RPM ? MIN_RPM : rpm;
-  const percent = Math.round((rpmForCalc / modalState.maxRpm) * 100);
+  let rpmForCalc = rpm;
+  if (modalState.isPump) {
+    rpmForCalc = rpm > 0 && rpm < PUMP_MIN_RPM ? PUMP_MIN_RPM : rpm;
+  } else {
+    rpmForCalc = rpm > 0 && rpm < MIN_RPM ? MIN_RPM : rpm;
+  }
+  const percent = Math.round((rpmForCalc / effectiveMax) * 100);
   updateComputedDisplay(fanModalPercent, clampValue(percent, 0, 100));
 };
 
@@ -86,6 +99,7 @@ const openFanModal = (tile) => {
   modalState.name = tile.getAttribute('data-fan-name') || `Fan ${modalState.channel}`;
   const maxRpmRaw = tile.getAttribute('data-fan-max-rpm');
   modalState.maxRpm = maxRpmRaw ? Number.parseInt(maxRpmRaw, 10) : null;
+  modalState.isPump = tile.getAttribute('data-is-pump') === 'true';
   modalState.mode = 'percent';
   if (fanModalFan) {
     fanModalFan.textContent = modalState.name;
@@ -94,8 +108,15 @@ const openFanModal = (tile) => {
     fanModalPercent.value = '50';
   }
   if (fanModalRpm) {
-    fanModalRpm.value = modalState.maxRpm ? String(modalState.maxRpm) : '0';
-    fanModalRpm.placeholder = modalState.maxRpm ? '' : '--';
+    const effectiveMax = modalState.isPump ? PUMP_MAX_RPM : modalState.maxRpm;
+    fanModalRpm.value = effectiveMax ? String(effectiveMax) : '0';
+    fanModalRpm.placeholder = effectiveMax ? '' : '--';
+  }
+  if (fanModalPassword) {
+    fanModalPassword.value = '';
+  }
+  if (fanModalPumpAuth) {
+    fanModalPumpAuth.classList.toggle('modal__row--hidden', !modalState.isPump);
   }
   updateModeState();
   syncComputedValues();
@@ -131,7 +152,7 @@ const hideModalError = () => {
 const updateModeState = () => {
   modeButtons.forEach((button) => {
     const mode = button.getAttribute('data-mode');
-    const disabled = mode === 'rpm' && !modalState.maxRpm;
+    const disabled = mode === 'rpm' && !modalState.isPump && !modalState.maxRpm;
     button.classList.toggle('mode-toggle__button--active', mode === modalState.mode);
     button.classList.toggle('mode-toggle__button--disabled', !!disabled);
   });
@@ -143,11 +164,19 @@ const updateModeState = () => {
   }
   if (fanModalNote) {
     if (modalState.mode === 'rpm' && !modalState.maxRpm) {
-      fanModalNote.textContent = 'RPM control requires calibration. Set max RPM in Settings.';
+      if (modalState.isPump) {
+        fanModalNote.textContent = `Pump range ${PUMP_MIN_RPM}-${PUMP_MAX_RPM} RPM.`;
+      } else {
+        fanModalNote.textContent = 'RPM control requires calibration. Set max RPM in Settings.';
+      }
     } else if (modalState.mode === 'rpm' && modalState.maxRpm) {
       fanModalNote.textContent = `Max calibrated RPM: ${modalState.maxRpm}`;
     } else {
-      fanModalNote.textContent = `Manual overrides can be replaced by profiles. RPM below ${MIN_RPM} will be bumped up.`;
+      if (modalState.isPump) {
+        fanModalNote.textContent = `Manual overrides can be replaced by profiles. Pump min ${PUMP_MIN_RPM} RPM.`;
+      } else {
+        fanModalNote.textContent = `Manual overrides can be replaced by profiles. RPM below ${MIN_RPM} will be bumped up.`;
+      }
     }
   }
   syncComputedValues();
@@ -156,13 +185,17 @@ const updateModeState = () => {
 const metricFormatters = {
   cpu_temp: (value) => `${value}°C`,
   ambient_temp: (value) => `${value}°C`,
-  fan_rpm: (value) => `${value}`,
+  cpu_fan_percent: (value) => `${value}%`,
   pump_percent: (value) => `${value}%`,
 };
 
 const setMetricValue = (el, value) => {
   const key = el.getAttribute('data-metric');
   if (!key) {
+    return;
+  }
+  if (value === undefined || value === null) {
+    el.textContent = '--';
     return;
   }
   const formatter = metricFormatters[key];
@@ -194,9 +227,6 @@ const refreshMetrics = async () => {
       metricEls.forEach((el) => {
         const key = el.getAttribute('data-metric');
         const value = data[key];
-        if (value === undefined || value === null) {
-          return;
-        }
         setMetricValue(el, value);
       });
     }
@@ -222,7 +252,7 @@ const refreshTrend = async () => {
       tempSeries.push({ key: 'cpu', label: 'CPU', values: cpu, color: 'var(--accent)' });
     }
     if (ambient.length > 1) {
-      tempSeries.push({ key: 'ambient', label: 'Ambient', values: ambient, color: 'var(--alert)' });
+      tempSeries.push({ key: 'ambient', label: '970 Pro SSD', values: ambient, color: 'var(--alert)' });
     }
     sensorMeta.forEach((sensor, index) => {
       const key = `sensor_${sensor.id}`;
@@ -439,7 +469,7 @@ modeButtons.forEach((button) => {
     if (!mode) {
       return;
     }
-    if (mode === 'rpm' && !modalState.maxRpm) {
+    if (mode === 'rpm' && !modalState.isPump && !modalState.maxRpm) {
       showModalError('RPM control requires a calibrated max RPM.');
       return;
     }
@@ -480,8 +510,10 @@ fanModalSave?.addEventListener('click', async () => {
       showModalError('Enter a whole number between 0 and 100.');
       return;
     }
-    if (parsed > 0 && modalState.maxRpm) {
-      const minPercent = Math.min(100, Math.ceil((MIN_RPM / modalState.maxRpm) * 100));
+    const effectiveMax = modalState.isPump ? PUMP_MAX_RPM : modalState.maxRpm;
+    const minRpm = modalState.isPump ? PUMP_MIN_RPM : MIN_RPM;
+    if (parsed > 0 && effectiveMax) {
+      const minPercent = Math.min(100, Math.ceil((minRpm / effectiveMax) * 100));
       if (parsed < minPercent) {
         parsed = minPercent;
         if (fanModalPercent) {
@@ -491,7 +523,9 @@ fanModalSave?.addEventListener('click', async () => {
     }
     value = parsed;
   } else {
-    if (!modalState.maxRpm) {
+    const effectiveMax = modalState.isPump ? PUMP_MAX_RPM : modalState.maxRpm;
+    const minRpm = modalState.isPump ? PUMP_MIN_RPM : MIN_RPM;
+    if (!effectiveMax) {
       showModalError('RPM control requires a calibrated max RPM.');
       return;
     }
@@ -500,24 +534,34 @@ fanModalSave?.addEventListener('click', async () => {
       showModalError('Enter a whole number RPM value.');
       return;
     }
-    if (parsed > 0 && parsed < MIN_RPM) {
-      parsed = MIN_RPM;
+    if (parsed > 0 && parsed < minRpm) {
+      parsed = minRpm;
       if (fanModalRpm) {
-        fanModalRpm.value = String(MIN_RPM);
+        fanModalRpm.value = String(minRpm);
       }
     }
-    if (parsed > modalState.maxRpm) {
-      showModalError(`RPM cannot exceed ${modalState.maxRpm}.`);
+    if (parsed > effectiveMax) {
+      showModalError(`RPM cannot exceed ${effectiveMax}.`);
       return;
     }
     value = parsed;
   }
   syncComputedValues();
+  if (modalState.isPump) {
+    const password = fanModalPassword?.value || '';
+    if (!password) {
+      showModalError('Admin password required.');
+      return;
+    }
+  }
 
   const params = new URLSearchParams();
   params.set('channel_index', modalState.channel);
   params.set('mode', modalState.mode);
   params.set('value', String(value));
+  if (modalState.isPump && fanModalPassword) {
+    params.set('admin_password', fanModalPassword.value || '');
+  }
   try {
     const response = await fetch('/api/fans/manual', {
       method: 'POST',
@@ -596,46 +640,11 @@ const applyTempPalette = (series) => {
   });
 };
 
-const buildLegend = (container, items) => {
-  if (!container) {
-    return;
-  }
-  container.innerHTML = items
-    .map(
-      (item) =>
-        `<div class="legend__item"><span class="legend__swatch" style="--legend-color:${item.color}"></span>${item.label}</div>`
-    )
-    .join('');
-};
-
-const updateTempLegend = (series) => {
-  buildLegend(
-    tempLegend,
-    series.map((item) => ({ label: item.label, color: item.color }))
-  );
-};
 
 const updateLegends = () => {
   if (latestTempSeries.length) {
-    updateTempLegend(latestTempSeries);
+    // No-op: temperature legend removed.
   }
-
-  if (!fanLegend) {
-    return;
-  }
-  const fanItems = [];
-  const fanLines = Array.from(document.querySelectorAll('label[data-series^="fan_"]'));
-  fanLines.forEach((label, index) => {
-    const input = label.querySelector('input');
-    if (!input || input.disabled) {
-      return;
-    }
-    const color = fanPalette[index % fanPalette.length];
-    fanItems.push({ label: label.textContent.trim(), color });
-  });
-  fanItems.push({ label: 'CPU Fan', color: '#22c55e' });
-  fanItems.push({ label: 'Pump', color: '#f97316' });
-  buildLegend(fanLegend, fanItems);
 };
 
 const attachTooltip = (chart, tooltipEl, getSeries, unit) => {

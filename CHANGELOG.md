@@ -1,5 +1,20 @@
 ### Changelog
 
+## v0.0.4 - January 9, 2026
+
+- Try `iw`/nl80211 Wi-Fi signal polling before wpa_cli/sysfs fallbacks.
+- Add a Wi-Fi signal sidecar exporter for host-based signal reads.
+- Show Wi-Fi signal strength (dBm) alongside percent in Admin.
+- Keep Wi-Fi signal dBm in admin auto-refresh updates.
+- Replace ambient temp telemetry with NVMe temperature via lm-sensors.
+- Add a pump channel mapping in Settings with password-gated pump overrides.
+- Enforce pump overrides to 0 or >= 800 RPM (clamped) using a default max RPM.
+- Allow pump RPM overrides without calibration when the pump channel is selected.
+- Replace dashboard System Pulse copy with live Liquidctl connection status.
+- Replace dashboard fan RPM tile with CPU fan percent (max 8000 RPM).
+- Remove fan chart legend so toggles are the only selectors.
+- Remove temperature chart legend in favor of toggle pills.
+
 ## v0.0.3 - January 9, 2026
 
 - Select OLED mux channel before initializing SSD1306 to prevent I2C device not found errors.
