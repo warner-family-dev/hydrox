@@ -139,6 +139,9 @@ def get_wifi_strength(interface: str = "wlan0") -> dict:
 def _read_wifi_strength(interface: str = "wlan0") -> dict:
     logger = get_logger()
     desired = os.getenv("HYDROX_WIFI_INTERFACE", interface)
+    iw_result = _read_iw_signal(desired)
+    if iw_result is not None:
+        return iw_result
     wpa_result = _read_wpa_signal(desired)
     if wpa_result is not None:
         return wpa_result
@@ -209,17 +212,19 @@ _wifi_parse_logged = False
 _wifi_missing_logged = False
 _wifi_sys_missing_logged = False
 _wifi_wpa_missing_logged = False
+_wifi_iw_missing_logged = False
 
 
 def _log_wifi_once(flag_name: str, message: str, *args: object) -> None:
     global _wifi_proc_missing_logged, _wifi_parse_logged, _wifi_missing_logged, _wifi_sys_missing_logged
-    global _wifi_wpa_missing_logged
+    global _wifi_wpa_missing_logged, _wifi_iw_missing_logged
     flags = {
         "_wifi_proc_missing_logged": _wifi_proc_missing_logged,
         "_wifi_parse_logged": _wifi_parse_logged,
         "_wifi_missing_logged": _wifi_missing_logged,
         "_wifi_sys_missing_logged": _wifi_sys_missing_logged,
         "_wifi_wpa_missing_logged": _wifi_wpa_missing_logged,
+        "_wifi_iw_missing_logged": _wifi_iw_missing_logged,
     }
     if flags.get(flag_name):
         return
@@ -234,6 +239,8 @@ def _log_wifi_once(flag_name: str, message: str, *args: object) -> None:
         _wifi_sys_missing_logged = True
     elif flag_name == "_wifi_wpa_missing_logged":
         _wifi_wpa_missing_logged = True
+    elif flag_name == "_wifi_iw_missing_logged":
+        _wifi_iw_missing_logged = True
 
 
 def _read_sysfs_wifi(interface: str) -> dict | None:
@@ -296,6 +303,39 @@ def _read_wpa_signal(interface: str) -> dict | None:
         )
         return None
     percent = _signal_to_percent(rssi)
+    return {"label": _wifi_label(percent), "percent": percent, "interface": interface}
+
+
+def _read_iw_signal(interface: str) -> dict | None:
+    try:
+        result = subprocess.run(
+            ["iw", "dev", interface, "link"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except FileNotFoundError:
+        _log_wifi_once("_wifi_iw_missing_logged", "wifi strength unavailable: iw not installed")
+        return None
+    if result.returncode != 0:
+        _log_wifi_once(
+            "_wifi_iw_missing_logged",
+            "wifi strength unavailable: iw failed for %s: %s",
+            interface,
+            result.stderr.strip() or result.stdout.strip(),
+        )
+        return None
+    if "Not connected." in result.stdout:
+        return {"label": "unknown", "percent": None, "interface": interface}
+    signal = _parse_iw_signal(result.stdout)
+    if signal is None:
+        _log_wifi_once(
+            "_wifi_parse_logged",
+            "wifi strength parse error: iw missing signal for %s",
+            interface,
+        )
+        return None
+    percent = _signal_to_percent(signal)
     return {"label": _wifi_label(percent), "percent": percent, "interface": interface}
 
 

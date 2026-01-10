@@ -1,5 +1,9 @@
 ### Changelog
 
+## v0.0.4 - January 9, 2026
+
+- Try `iw`/nl80211 Wi-Fi signal polling before wpa_cli/sysfs fallbacks.
+
 ## v0.0.3 - January 9, 2026
 
 - Select OLED mux channel before initializing SSD1306 to prevent I2C device not found errors.
