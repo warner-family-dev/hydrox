@@ -1,4 +1,6 @@
 from dataclasses import dataclass
+import os
+import shutil
 
 from luma.core.interface.serial import i2c
 from luma.core.render import canvas
@@ -25,6 +27,13 @@ FONT_CHOICES = {
     "Liberation Mono": "/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf",
 }
 
+FONT_WEB_FILES = {
+    "DejaVu Sans": "DejaVuSans.ttf",
+    "DejaVu Sans Mono": "DejaVuSansMono.ttf",
+    "Liberation Sans": "LiberationSans-Regular.ttf",
+    "Liberation Mono": "LiberationMono-Regular.ttf",
+}
+
 
 @dataclass
 class ScreenPayload:
@@ -39,6 +48,24 @@ def list_font_choices() -> list[dict]:
 
 def list_oled_channels() -> list[dict]:
     return [{"label": label, "channel": channel} for label, channel in OLED_CHANNELS.items()]
+
+
+def ensure_web_fonts(static_dir: str = "app/static/fonts") -> None:
+    logger = get_logger()
+    os.makedirs(static_dir, exist_ok=True)
+    for name, source in FONT_CHOICES.items():
+        filename = FONT_WEB_FILES.get(name)
+        if not filename:
+            continue
+        target = os.path.join(static_dir, filename)
+        if os.path.exists(target):
+            continue
+        try:
+            shutil.copyfile(source, target)
+        except FileNotFoundError:
+            logger.warning("oled font file missing for web preview: %s", source)
+        except OSError:
+            logger.exception("oled font copy failed for %s", source)
 
 
 def select_oled_channel(channel: int) -> None:

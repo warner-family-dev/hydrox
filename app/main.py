@@ -22,7 +22,7 @@ from app.services.metrics import (
     recent_metrics,
     seed_metrics_if_empty,
 )
-from app.services.oled import list_font_choices, list_oled_channels
+from app.services.oled import ensure_web_fonts, list_font_choices, list_oled_channels
 from app.services.oled_manager import PlaylistScreen, list_token_definitions, start_oled_job, stop_oled_job
 from app.services.sensors import (
     format_temp,
@@ -78,6 +78,7 @@ def startup() -> None:
     seed_metrics_if_empty()
     seed_fans_if_empty()
     seed_sensors_if_empty()
+    ensure_web_fonts()
     branch, _ = get_git_status()
     logger = get_logger()
     logger.info("#######")

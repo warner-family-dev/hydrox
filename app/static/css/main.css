@@ -1,5 +1,29 @@
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=Space+Grotesk:wght@400;500;600&display=swap');
 
+@font-face {
+  font-family: "DejaVu Sans";
+  src: local("DejaVu Sans"), url("/static/fonts/DejaVuSans.ttf") format("truetype");
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "DejaVu Sans Mono";
+  src: local("DejaVu Sans Mono"), url("/static/fonts/DejaVuSansMono.ttf") format("truetype");
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Liberation Sans";
+  src: local("Liberation Sans"), url("/static/fonts/LiberationSans-Regular.ttf") format("truetype");
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Liberation Mono";
+  src: local("Liberation Mono"), url("/static/fonts/LiberationMono-Regular.ttf") format("truetype");
+  font-display: swap;
+}
+
 :root {
   --bg: #0c0f13;
   --bg-alt: #101621;
