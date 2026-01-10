@@ -3,6 +3,7 @@
 ## v0.0.4 - January 9, 2026
 
 - Try `iw`/nl80211 Wi-Fi signal polling before wpa_cli/sysfs fallbacks.
+- Add a Wi-Fi signal sidecar exporter for host-based signal reads.
 
 ## v0.0.3 - January 9, 2026
 

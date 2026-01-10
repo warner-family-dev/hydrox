@@ -1,7 +1,10 @@
+import json
 import os
 import shutil
 import subprocess
 import time
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 from app.services.liquidctl import has_liquidctl_devices
@@ -139,6 +142,9 @@ def get_wifi_strength(interface: str = "wlan0") -> dict:
 def _read_wifi_strength(interface: str = "wlan0") -> dict:
     logger = get_logger()
     desired = os.getenv("HYDROX_WIFI_INTERFACE", interface)
+    exporter_result = _read_wifi_exporter(desired)
+    if exporter_result is not None:
+        return exporter_result
     iw_result = _read_iw_signal(desired)
     if iw_result is not None:
         return iw_result
@@ -213,11 +219,12 @@ _wifi_missing_logged = False
 _wifi_sys_missing_logged = False
 _wifi_wpa_missing_logged = False
 _wifi_iw_missing_logged = False
+_wifi_exporter_logged = False
 
 
 def _log_wifi_once(flag_name: str, message: str, *args: object) -> None:
     global _wifi_proc_missing_logged, _wifi_parse_logged, _wifi_missing_logged, _wifi_sys_missing_logged
-    global _wifi_wpa_missing_logged, _wifi_iw_missing_logged
+    global _wifi_wpa_missing_logged, _wifi_iw_missing_logged, _wifi_exporter_logged
     flags = {
         "_wifi_proc_missing_logged": _wifi_proc_missing_logged,
         "_wifi_parse_logged": _wifi_parse_logged,
@@ -225,6 +232,7 @@ def _log_wifi_once(flag_name: str, message: str, *args: object) -> None:
         "_wifi_sys_missing_logged": _wifi_sys_missing_logged,
         "_wifi_wpa_missing_logged": _wifi_wpa_missing_logged,
         "_wifi_iw_missing_logged": _wifi_iw_missing_logged,
+        "_wifi_exporter_logged": _wifi_exporter_logged,
     }
     if flags.get(flag_name):
         return
@@ -241,6 +249,8 @@ def _log_wifi_once(flag_name: str, message: str, *args: object) -> None:
         _wifi_wpa_missing_logged = True
     elif flag_name == "_wifi_iw_missing_logged":
         _wifi_iw_missing_logged = True
+    elif flag_name == "_wifi_exporter_logged":
+        _wifi_exporter_logged = True
 
 
 def _read_sysfs_wifi(interface: str) -> dict | None:
@@ -272,6 +282,31 @@ def _read_sysfs_wifi(interface: str) -> dict | None:
         return None
     percent = int(max(0, min(100, round(link_value / 70 * 100))))
     return {"label": _wifi_label(percent), "percent": percent, "interface": interface}
+
+
+def _read_wifi_exporter(interface: str) -> dict | None:
+    url = os.getenv("HYDROX_WIFI_EXPORTER_URL")
+    if not url:
+        return None
+    try:
+        with urllib.request.urlopen(url, timeout=2) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except (urllib.error.URLError, ValueError, json.JSONDecodeError) as exc:
+        _log_wifi_once("_wifi_exporter_logged", "wifi exporter unavailable: %s", exc)
+        return None
+    percent = payload.get("percent")
+    if percent is None:
+        return {"label": "unknown", "percent": None, "interface": payload.get("interface", interface)}
+    try:
+        percent_value = int(percent)
+    except (TypeError, ValueError):
+        _log_wifi_once("_wifi_exporter_logged", "wifi exporter parse error: invalid percent")
+        return None
+    return {
+        "label": _wifi_label(percent_value),
+        "percent": max(0, min(100, percent_value)),
+        "interface": payload.get("interface", interface),
+    }
 
 
 def _read_wpa_signal(interface: str) -> dict | None:
