@@ -51,7 +51,7 @@ from app.services.settings import (
     set_pump_channel,
 )
 from app.services.daemon import start_daemon
-from app.services.system_status import get_status_payload, set_image_start_time
+from app.services.system_status import get_status_payload, get_wifi_strength, set_image_start_time
 
 app = FastAPI(title="Hydrox Command Center")
 
@@ -123,6 +123,7 @@ def dashboard(request: Request):
     if pump_channel is None and metrics:
         metrics["pump_percent"] = None
     liquidctl_status = "Connected" if has_liquidctl_devices() else "Not connected"
+    wifi_status = get_wifi_strength()
     sensors = list_sensors()
     readings = latest_sensor_readings()
     sensor_cards = []
@@ -145,6 +146,7 @@ def dashboard(request: Request):
             "pump_channel": pump_channel,
             "sensors": sensor_cards,
             "liquidctl_status": liquidctl_status,
+            "wifi_status": wifi_status,
         },
     )
 

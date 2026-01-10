@@ -9,6 +9,9 @@ const tempTooltip = document.querySelector('[data-tooltip="temperature"]');
 const fanTooltip = document.querySelector('[data-tooltip="fan"]');
 const tempChart = document.querySelector('[data-chart="temperature"]');
 const fanChart = document.querySelector('[data-chart="fan"]');
+const wifiValue = document.querySelector('[data-wifi-value]');
+const wifiSub = document.querySelector('[data-wifi-sub]');
+const wifiGauge = document.querySelector('[data-wifi-gauge]');
 
 const fanPalette = ['#38bdf8', '#818cf8', '#f472b6', '#22c55e', '#eab308', '#f97316', '#a855f7'];
 const fanTiles = document.querySelectorAll('[data-fan-channel]');
@@ -444,6 +447,33 @@ const refreshSensors = async () => {
   }
 };
 
+const refreshWifi = async () => {
+  if (!wifiValue || !wifiSub || !wifiGauge) {
+    return;
+  }
+  try {
+    const response = await fetch('/api/admin/status', { cache: 'no-store' });
+    if (!response.ok) {
+      return;
+    }
+    const data = await response.json();
+    const wifi = data.wifi || {};
+    if (wifi.percent === null || wifi.percent === undefined) {
+      wifiValue.textContent = '--';
+      wifiSub.textContent = 'unknown';
+      wifiGauge.style.setProperty('--wifi-percent', 0);
+      return;
+    }
+    const percent = Math.max(0, Math.min(100, wifi.percent));
+    wifiValue.textContent = `${percent}%`;
+    const dbm = wifi.signal_dbm !== null && wifi.signal_dbm !== undefined ? `${wifi.signal_dbm} dBm · ` : '';
+    wifiSub.textContent = `${dbm}${wifi.label || ''}`.trim();
+    wifiGauge.style.setProperty('--wifi-percent', percent);
+  } catch (error) {
+    // Ignore transient fetch failures.
+  }
+};
+
 toggles.forEach((toggle) => {
   toggle.addEventListener('change', (event) => {
     const targetId = event.target.getAttribute('data-target');
@@ -690,6 +720,7 @@ refreshTrend();
 refreshFanChart();
 refreshFanTiles();
 refreshSensors();
+refreshWifi();
 attachTooltip(
   tempChart,
   tempTooltip,
@@ -730,5 +761,6 @@ setInterval(() => {
   refreshFanChart();
   refreshFanTiles();
   refreshSensors();
+  refreshWifi();
   updateLegends();
 }, 2000);

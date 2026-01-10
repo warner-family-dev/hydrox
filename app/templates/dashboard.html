@@ -10,6 +10,18 @@
     <div class="status-card__value">Liquidctl</div>
     <div class="status-card__sub">{{ liquidctl_status }}</div>
   </div>
+  <div class="status-card status-card--compact" data-wifi-card>
+    <div class="status-card__label">Wi-Fi Signal</div>
+    <div class="status-card__value" data-wifi-value>
+      {% if wifi_status.percent is not none %}{{ wifi_status.percent }}%{% else %}--{% endif %}
+    </div>
+    <div class="status-card__sub" data-wifi-sub>
+      {% if wifi_status.signal_dbm is not none %}{{ wifi_status.signal_dbm }} dBm · {% endif %}{{ wifi_status.label }}
+    </div>
+    <div class="wifi-gauge" data-wifi-gauge style="--wifi-percent: {{ wifi_status.percent if wifi_status.percent is not none else 0 }};">
+      <div class="wifi-gauge__inner"></div>
+    </div>
+  </div>
 </section>
 
 <section class="grid">

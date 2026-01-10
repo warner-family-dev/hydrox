@@ -177,6 +177,34 @@ body {
   color: var(--muted);
 }
 
+.status-card--compact {
+  min-width: 220px;
+  position: relative;
+}
+
+.wifi-gauge {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: conic-gradient(
+    #22c55e calc(var(--wifi-percent) * 1%),
+    rgba(20, 27, 38, 0.6) 0
+  );
+  position: absolute;
+  right: 18px;
+  top: 18px;
+  display: grid;
+  place-items: center;
+}
+
+.wifi-gauge__inner {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: var(--panel-soft);
+  border: 1px solid var(--border);
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
