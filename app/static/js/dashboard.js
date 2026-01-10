@@ -187,7 +187,7 @@ const updateModeState = () => {
 const metricFormatters = {
   cpu_temp: (value) => `${value}°C`,
   ambient_temp: (value) => `${value}°C`,
-  fan_rpm: (value) => `${value}`,
+  cpu_fan_percent: (value) => `${value}%`,
   pump_percent: (value) => `${value}%`,
 };
 

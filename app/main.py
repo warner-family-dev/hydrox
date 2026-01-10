@@ -113,6 +113,11 @@ def root() -> RedirectResponse:
 @app.get("/dashboard", response_class=HTMLResponse)
 def dashboard(request: Request):
     metrics = latest_metrics()
+    cpu_fan_percent = None
+    cpu_fan_rows = recent_cpu_fan_readings(limit=1)
+    if cpu_fan_rows:
+        rpm = cpu_fan_rows[0]["rpm"]
+        cpu_fan_percent = int(max(0, min(100, round(rpm / 8000 * 100))))
     fans = list_fans(active_only=True)
     pump_channel = get_pump_channel()
     liquidctl_status = "Connected" if has_liquidctl_devices() else "Not connected"
@@ -133,6 +138,7 @@ def dashboard(request: Request):
         {
             "request": request,
             "metrics": metrics,
+            "cpu_fan_percent": cpu_fan_percent,
             "fans": fans,
             "pump_channel": pump_channel,
             "sensors": sensor_cards,
@@ -548,7 +554,14 @@ def ingest_metrics(
 
 @app.get("/api/metrics/latest")
 def get_latest_metrics():
-    return JSONResponse(latest_metrics() or {})
+    metrics = latest_metrics() or {}
+    cpu_fan_percent = None
+    cpu_fan_rows = recent_cpu_fan_readings(limit=1)
+    if cpu_fan_rows:
+        rpm = cpu_fan_rows[0]["rpm"]
+        cpu_fan_percent = int(max(0, min(100, round(rpm / 8000 * 100))))
+    metrics["cpu_fan_percent"] = cpu_fan_percent
+    return JSONResponse(metrics)
 
 
 @app.get("/api/metrics/recent")

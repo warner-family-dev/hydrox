@@ -24,9 +24,11 @@
     <div class="metric-card__sub">NVMe drive</div>
   </div>
   <div class="metric-card">
-    <div class="metric-card__label">Fan RPM</div>
-    <div class="metric-card__value" data-metric="fan_rpm">{{ metrics.fan_rpm if metrics else "--" }}</div>
-    <div class="metric-card__sub">Aggregate sample</div>
+    <div class="metric-card__label">CPU Fan %</div>
+    <div class="metric-card__value" data-metric="cpu_fan_percent">
+      {% if cpu_fan_percent is not none %}{{ cpu_fan_percent }}%{% else %}--{% endif %}
+    </div>
+    <div class="metric-card__sub">Percent of 8000 RPM</div>
   </div>
   <div class="metric-card">
     <div class="metric-card__label">Pump %</div>
