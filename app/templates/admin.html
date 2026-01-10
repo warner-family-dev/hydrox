@@ -58,7 +58,10 @@
           <div class="wifi-meter__bar">
             <div class="wifi-meter__fill" style="width: {{ status.wifi.percent }}%;"></div>
           </div>
-          <div class="wifi-meter__label">{{ status.wifi.percent }}% ({{ status.wifi.label }})</div>
+        <div class="wifi-meter__label">
+          {% if status.wifi.signal_dbm is not none %}{{ status.wifi.signal_dbm }} dBm · {% endif %}
+          {{ status.wifi.percent }}% ({{ status.wifi.label }})
+        </div>
         </div>
         {% else %}
         <div class="wifi-meter__label">unknown</div>

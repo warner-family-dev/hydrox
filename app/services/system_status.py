@@ -302,10 +302,16 @@ def _read_wifi_exporter(interface: str) -> dict | None:
     except (TypeError, ValueError):
         _log_wifi_once("_wifi_exporter_logged", "wifi exporter parse error: invalid percent")
         return None
+    signal_dbm = payload.get("signal_dbm")
+    try:
+        signal_dbm = int(signal_dbm) if signal_dbm is not None else None
+    except (TypeError, ValueError):
+        signal_dbm = None
     return {
         "label": _wifi_label(percent_value),
         "percent": max(0, min(100, percent_value)),
         "interface": payload.get("interface", interface),
+        "signal_dbm": signal_dbm,
     }
 
 
@@ -338,7 +344,12 @@ def _read_wpa_signal(interface: str) -> dict | None:
         )
         return None
     percent = _signal_to_percent(rssi)
-    return {"label": _wifi_label(percent), "percent": percent, "interface": interface}
+    return {
+        "label": _wifi_label(percent),
+        "percent": percent,
+        "interface": interface,
+        "signal_dbm": rssi,
+    }
 
 
 def _read_iw_signal(interface: str) -> dict | None:
@@ -371,7 +382,12 @@ def _read_iw_signal(interface: str) -> dict | None:
         )
         return None
     percent = _signal_to_percent(signal)
-    return {"label": _wifi_label(percent), "percent": percent, "interface": interface}
+    return {
+        "label": _wifi_label(percent),
+        "percent": percent,
+        "interface": interface,
+        "signal_dbm": signal,
+    }
 
 
 def _parse_wpa_signal(output: str) -> int | None:
