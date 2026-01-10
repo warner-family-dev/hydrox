@@ -2,6 +2,7 @@
 
 ## v0.0.3 - January 9, 2026
 
+- Add hover cursor/affordance for dashboard fan tiles.
 - Add dashboard fan tile modal for manual PWM/RPM overrides with calibration-aware validation.
 - Add OLED chain playlists with drag-and-drop ordering and per-screen rotation timing.
 - Publish OLED chains as playlists and turn panels off when a chain is empty.

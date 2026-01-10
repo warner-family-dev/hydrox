@@ -307,6 +307,13 @@ body {
   border-radius: 14px;
   background: var(--panel-soft);
   border: 1px solid var(--border);
+  cursor: pointer;
+  transition: border 0.2s ease, box-shadow 0.2s ease;
+}
+
+.fan-tile:hover {
+  border-color: rgba(59, 130, 246, 0.6);
+  box-shadow: 0 12px 24px rgba(59, 130, 246, 0.15);
 }
 
 .fan-tile__title {
