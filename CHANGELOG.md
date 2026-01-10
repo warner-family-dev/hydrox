@@ -2,6 +2,7 @@
 
 ## v0.0.3 - January 9, 2026
 
+- Select OLED mux channel before initializing SSD1306 to prevent I2C device not found errors.
 - Serve bundled OLED fonts for web previews in the Screen Updater.
 - Clamp manual fan overrides to a 250 RPM minimum (or off) across percent/RPM inputs.
 - Log manual fan overrides from the dashboard control.

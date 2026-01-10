@@ -53,6 +53,7 @@ class OLEDJob:
             clear_screen(self.channel)
             return
         try:
+            select_oled_channel(self.channel)
             serial = i2c(port=I2C_BUS, address=OLED_ADDR)
             device = ssd1306(serial, width=128, height=64)
         except Exception:
