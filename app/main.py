@@ -57,6 +57,8 @@ app = FastAPI(title="Hydrox Command Center")
 
 _cpu_fan_missing_logged = False
 _ADMIN_PASSWORD = "admin"
+_PUMP_MIN_RPM = 800
+_PUMP_MAX_RPM = 4800
 _calibration_lock = threading.Lock()
 _calibration_state = {
     "running": False,
@@ -630,7 +632,8 @@ def set_manual_fan_speed(
     logger = get_logger()
     min_rpm = 250
     pump_channel = get_pump_channel()
-    if pump_channel is not None and channel_index == pump_channel:
+    is_pump = pump_channel is not None and channel_index == pump_channel
+    if is_pump:
         if admin_password != _ADMIN_PASSWORD:
             return JSONResponse({"ok": False, "error": "Admin password required."}, status_code=403)
     fans = list_fans(active_only=True)
@@ -646,21 +649,29 @@ def set_manual_fan_speed(
     if mode == "percent":
         if value > 100:
             return JSONResponse({"ok": False, "error": "Percent must be 0-100."}, status_code=400)
-        if value > 0 and fan.get("max_rpm"):
-            max_rpm = fan["max_rpm"]
-            if max_rpm and max_rpm > 0:
-                min_percent = min(100, int((min_rpm * 100 + max_rpm - 1) / max_rpm))
+        if value > 0:
+            if is_pump:
+                min_percent = min(100, int((_PUMP_MIN_RPM * 100 + _PUMP_MAX_RPM - 1) / _PUMP_MAX_RPM))
                 if value < min_percent:
                     value = min_percent
+            elif fan.get("max_rpm"):
+                max_rpm = fan["max_rpm"]
+                if max_rpm and max_rpm > 0:
+                    min_percent = min(100, int((min_rpm * 100 + max_rpm - 1) / max_rpm))
+                    if value < min_percent:
+                        value = min_percent
         percent = value
     else:
-        max_rpm = fan.get("max_rpm")
+        max_rpm = _PUMP_MAX_RPM if is_pump else fan.get("max_rpm")
         if not max_rpm:
             return JSONResponse(
                 {"ok": False, "error": "RPM control requires a calibrated max RPM."},
                 status_code=400,
             )
-        if value > 0 and value < min_rpm:
+        if is_pump:
+            if value > 0 and value < _PUMP_MIN_RPM:
+                value = _PUMP_MIN_RPM
+        elif value > 0 and value < min_rpm:
             value = min_rpm
         if value > max_rpm:
             return JSONResponse(

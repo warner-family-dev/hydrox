@@ -8,6 +8,7 @@
 - Keep Wi-Fi signal dBm in admin auto-refresh updates.
 - Replace ambient temp telemetry with NVMe temperature via lm-sensors.
 - Add a pump channel mapping in Settings with password-gated pump overrides.
+- Enforce pump overrides to 0 or >= 800 RPM (clamped) using a default max RPM.
 
 ## v0.0.3 - January 9, 2026
 
