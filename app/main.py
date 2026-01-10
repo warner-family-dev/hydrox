@@ -592,6 +592,7 @@ def set_manual_fan_speed(
     mode: str = Form(...),
     value: int = Form(...),
 ):
+    logger = get_logger()
     fans = list_fans(active_only=True)
     fan = next((item for item in fans if item["channel_index"] == channel_index), None)
     if not fan:
@@ -623,7 +624,22 @@ def set_manual_fan_speed(
         percent = max(0, min(100, round(value / max_rpm * 100)))
 
     if not set_fan_speed(channel_index, int(percent)):
+        logger.error(
+            "manual fan override failed channel=%s mode=%s value=%s percent=%s",
+            channel_index,
+            mode,
+            value,
+            percent,
+        )
         return JSONResponse({"ok": False, "error": "Failed to update fan speed."}, status_code=500)
+    logger.info(
+        "manual fan override channel=%s mode=%s value=%s percent=%s max_rpm=%s",
+        channel_index,
+        mode,
+        value,
+        percent,
+        fan.get("max_rpm"),
+    )
     return JSONResponse({"ok": True, "percent": percent})
 
 
