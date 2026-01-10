@@ -105,7 +105,7 @@
     </div>
     <div class="fan-grid">
       {% for fan in fans %}
-      <div class="fan-tile" data-fan-channel="{{ fan.channel_index }}">
+      <div class="fan-tile" data-fan-channel="{{ fan.channel_index }}" data-fan-name="{{ fan.name }}" data-fan-max-rpm="{{ fan.max_rpm if fan.max_rpm else '' }}">
         <div class="fan-tile__title">{{ fan.name }}</div>
         <div class="fan-tile__value">-- RPM</div>
         <div class="fan-tile__sub">Awaiting live feed</div>
@@ -156,6 +156,36 @@
       <div class="trend__tooltip" data-tooltip="fan"></div>
     </div>
     <div class="sparkline__note">Fan lines require max RPM values from calibration or manual entry.</div>
+  </div>
+</section>
+<section class="modal" id="fan-modal" aria-hidden="true">
+  <div class="modal__overlay" data-modal-close></div>
+  <div class="modal__panel" role="dialog" aria-modal="true" aria-labelledby="fan-modal-title">
+    <div class="modal__header">
+      <div>
+        <h3 id="fan-modal-title">Manual Fan Control</h3>
+        <div class="modal__sub" data-modal-fan>Fan</div>
+      </div>
+      <button class="modal__close" type="button" data-modal-close aria-label="Close">×</button>
+    </div>
+    <div class="mode-toggle" role="tablist">
+      <button class="mode-toggle__button mode-toggle__button--active" type="button" data-mode="percent">Percent</button>
+      <button class="mode-toggle__button" type="button" data-mode="rpm">RPM</button>
+    </div>
+    <div class="modal__body">
+      <label class="form__label" for="fan-percent-input">PWM Percent</label>
+      <input class="form__input" id="fan-percent-input" type="number" min="0" max="100" step="1" value="50" data-input-percent />
+
+      <label class="form__label" for="fan-rpm-input">Target RPM</label>
+      <input class="form__input" id="fan-rpm-input" type="number" min="0" step="1" value="0" data-input-rpm />
+
+      <div class="modal__note" data-modal-note></div>
+      <div class="modal__error" data-modal-error></div>
+    </div>
+    <div class="modal__footer">
+      <button class="button button--ghost" type="button" data-modal-cancel>Cancel</button>
+      <button class="button" type="button" data-modal-save>Save</button>
+    </div>
   </div>
 </section>
 <script src="/static/js/dashboard.js"></script>

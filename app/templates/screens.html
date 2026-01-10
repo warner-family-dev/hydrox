@@ -3,7 +3,7 @@
 <section class="hero">
   <div>
     <h1>Screen Updater</h1>
-    <p class="lead">Stage one message per OLED panel now, then add multi-message playlists later. Assign tags and rotation timing.</p>
+    <p class="lead">Build per-OLED playlists by chaining screens together. Each screen keeps its own rotation interval, and chains publish as a single playlist.</p>
   </div>
 </section>
 
@@ -17,14 +17,39 @@
       <label class="form__label">Screen Name</label>
       <input class="form__input" type="text" name="name" placeholder="North Panel" required />
 
-      <label class="form__label">Message Template</label>
-      <input class="form__input" type="text" name="message_template" placeholder="Ambient: {{ambient_temp}}°C" required />
+      <label class="form__label">Title Template</label>
+      <input class="form__input" type="text" name="title_template" placeholder="FAN 3" required />
 
-      <label class="form__label">Font Family</label>
-      <input class="form__input" type="text" name="font_family" value="IBM Plex Mono" required />
+      <label class="form__label">Value Template</label>
+      <input class="form__input" type="text" name="value_template" placeholder="{{fan3_rpm}}" required />
 
-      <label class="form__label">Font Size</label>
-      <input class="form__input" type="number" name="font_size" value="12" min="8" max="32" required />
+      <label class="form__label">Title Font</label>
+      <div class="font-select" data-font-select data-current="DejaVu Sans Mono">
+        <input type="hidden" name="title_font_family" value="DejaVu Sans Mono" />
+        <button class="font-select__button" type="button"></button>
+        <div class="font-select__options">
+          {% for font in fonts %}
+          <button class="font-select__option" type="button" data-value="{{ font.key }}" style="font-family: '{{ font.key }}', sans-serif;">{{ font.label }}</button>
+          {% endfor %}
+        </div>
+      </div>
+
+      <label class="form__label">Title Font Size</label>
+      <input class="form__input" type="number" name="title_font_size" value="16" min="8" max="32" required />
+
+      <label class="form__label">Value Font</label>
+      <div class="font-select" data-font-select data-current="DejaVu Sans Mono">
+        <input type="hidden" name="value_font_family" value="DejaVu Sans Mono" />
+        <button class="font-select__button" type="button"></button>
+        <div class="font-select__options">
+          {% for font in fonts %}
+          <button class="font-select__option" type="button" data-value="{{ font.key }}" style="font-family: '{{ font.key }}', sans-serif;">{{ font.label }}</button>
+          {% endfor %}
+        </div>
+      </div>
+
+      <label class="form__label">Value Font Size</label>
+      <input class="form__input" type="number" name="value_font_size" value="22" min="8" max="40" required />
 
       <label class="form__label">Rotation Interval (seconds)</label>
       <input class="form__input" type="number" name="rotation_seconds" value="15" min="5" max="600" required />
@@ -34,6 +59,14 @@
 
       <button class="button" type="submit">Save Screen</button>
     </form>
+    <div class="token-list">
+      <div class="token-list__title">Available tokens</div>
+      <div class="token-list__body">
+        {% for token in tokens %}
+        <div class="token-list__row"><span>{{ token.label }}</span><span class="token-list__token">{{ token.token }}</span></div>
+        {% endfor %}
+      </div>
+    </div>
   </div>
   <div class="panel">
     <div class="panel__header">
@@ -44,14 +77,60 @@
       {% if screens %}
         {% for screen in screens %}
         <div class="list__item">
-          <div class="list__title">{{ screen.name }}</div>
-          <div class="list__meta">{{ screen.created_at }}</div>
-          <div class="list__body">Message: {{ screen.message_template }}</div>
-          <div class="list__body">Font: {{ screen.font_family }} / {{ screen.font_size }}px</div>
-          <div class="list__body">Rotation: {{ screen.rotation_seconds }}s</div>
-          {% if screen.tag %}
-          <div class="list__body">Tag: {{ screen.tag }}</div>
-          {% endif %}
+          <form class="list__form" method="post" action="/screens/update">
+            <input type="hidden" name="screen_id" value="{{ screen.id }}" />
+            <label class="form__label">Screen Name</label>
+            <input class="form__input" type="text" name="name" value="{{ screen.name }}" required />
+
+            <label class="form__label">Title Template</label>
+            <input class="form__input" type="text" name="title_template" value="{{ screen.title_template or screen.name }}" required />
+
+            <label class="form__label">Value Template</label>
+            <input class="form__input" type="text" name="value_template" value="{{ screen.value_template or screen.message_template }}" required />
+
+            <label class="form__label">Title Font</label>
+            <div class="font-select" data-font-select data-current="{{ screen.title_font_family or screen.font_family or 'DejaVu Sans Mono' }}">
+              <input type="hidden" name="title_font_family" value="{{ screen.title_font_family or screen.font_family or 'DejaVu Sans Mono' }}" />
+              <button class="font-select__button" type="button"></button>
+              <div class="font-select__options">
+                {% for font in fonts %}
+                <button class="font-select__option" type="button" data-value="{{ font.key }}" style="font-family: '{{ font.key }}', sans-serif;">{{ font.label }}</button>
+                {% endfor %}
+              </div>
+            </div>
+
+            <label class="form__label">Title Font Size</label>
+            <input class="form__input" type="number" name="title_font_size" value="{{ screen.title_font_size or 16 }}" min="8" max="32" required />
+
+            <label class="form__label">Value Font</label>
+            <div class="font-select" data-font-select data-current="{{ screen.value_font_family or screen.font_family or 'DejaVu Sans Mono' }}">
+              <input type="hidden" name="value_font_family" value="{{ screen.value_font_family or screen.font_family or 'DejaVu Sans Mono' }}" />
+              <button class="font-select__button" type="button"></button>
+              <div class="font-select__options">
+                {% for font in fonts %}
+                <button class="font-select__option" type="button" data-value="{{ font.key }}" style="font-family: '{{ font.key }}', sans-serif;">{{ font.label }}</button>
+                {% endfor %}
+              </div>
+            </div>
+
+            <label class="form__label">Value Font Size</label>
+            <input class="form__input" type="number" name="value_font_size" value="{{ screen.value_font_size or screen.font_size }}" min="8" max="40" required />
+
+            <label class="form__label">Rotation Interval (seconds)</label>
+            <input class="form__input" type="number" name="rotation_seconds" value="{{ screen.rotation_seconds }}" min="5" max="600" required />
+
+            <label class="form__label">Tag (optional)</label>
+            <input class="form__input" type="text" name="tag" value="{{ screen.tag or '' }}" />
+
+            <div class="list__actions">
+              <button class="button button--ghost" type="submit">Update</button>
+              <button class="button button--ghost" type="submit" form="delete-screen-{{ screen.id }}">Delete</button>
+            </div>
+          </form>
+          <form id="delete-screen-{{ screen.id }}" method="post" action="/screens/delete">
+            <input type="hidden" name="screen_id" value="{{ screen.id }}" />
+          </form>
+          <div class="list__meta">Saved {{ screen.created_at }}</div>
         </div>
         {% endfor %}
       {% else %}
@@ -60,4 +139,111 @@
     </div>
   </div>
 </section>
+
+<section class="panel">
+  <div class="panel__header">
+    <h2>OLED Chains</h2>
+    <span class="panel__tag">Playlists</span>
+  </div>
+  <p class="panel__note">Drag screens into an OLED chain, reorder them, then publish the chain to the panel.</p>
+  <div class="chain-layout">
+    <div class="chain-library">
+      <div class="chain-library__title">Available Screens</div>
+      <div class="chain-library__list">
+        {% if screens %}
+          {% for screen in screens %}
+          <div class="chain-card" draggable="true" data-screen-card data-screen-id="{{ screen.id }}" data-screen-name="{{ screen.name }}" data-screen-duration="{{ screen.rotation_seconds }}">
+            <div class="chain-card__title">{{ screen.name }}</div>
+            <div class="chain-card__meta">{{ screen.rotation_seconds }}s</div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="empty">Save a screen to start building playlists.</div>
+        {% endif %}
+      </div>
+    </div>
+    <div class="chain-grid">
+      {% for oled in oled_channels %}
+      <form class="chain-panel" method="post" action="/screens/chains/update" data-chain-form>
+        <input type="hidden" name="oled_channel" value="{{ oled.channel }}" />
+        <input type="hidden" name="screen_ids" value="{{ chain_ids[oled.channel]|join(',') }}" data-chain-ids />
+        <div class="chain-panel__header">
+          <div>
+            <h3>{{ oled.label }}</h3>
+            <div class="chain-panel__sub">Drop screens here to build a chain.</div>
+          </div>
+          <button class="button button--ghost" type="submit">Save chain</button>
+        </div>
+        <div class="chain-list" data-chain-list data-oled-channel="{{ oled.channel }}">
+          {% if chains.get(oled.channel) %}
+            {% for item in chains.get(oled.channel) %}
+            <div class="chain-item" draggable="true" data-screen-id="{{ item.id }}">
+              <div>
+                <div class="chain-item__title">{{ item.name }}</div>
+                <div class="chain-item__meta">{{ item.rotation_seconds }}s</div>
+              </div>
+              <button class="chain-item__remove" type="button" aria-label="Remove screen">×</button>
+            </div>
+            {% endfor %}
+          {% else %}
+            <div class="chain-empty">Drop screens here to build a playlist.</div>
+          {% endif %}
+        </div>
+        <div class="chain-panel__footer">
+          <label class="toggle toggle--inline">
+            <input type="checkbox" name="pixel_shift" checked />
+            <span>Pixel shift</span>
+          </label>
+          <button class="button" type="submit" formaction="/screens/publish">Publish chain</button>
+          <button class="button button--ghost" type="submit" formaction="/screens/off">Turn off</button>
+        </div>
+      </form>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+<script>
+  const fontSelects = document.querySelectorAll('[data-font-select]');
+  const closeAllSelects = () => {
+    fontSelects.forEach((select) => select.classList.remove('font-select--open'));
+  };
+  document.addEventListener('click', (event) => {
+    if (!event.target.closest('.font-select')) {
+      closeAllSelects();
+    }
+  });
+  fontSelects.forEach((select) => {
+    const button = select.querySelector('.font-select__button');
+    const options = Array.from(select.querySelectorAll('.font-select__option'));
+    const hidden = select.querySelector('input[type="hidden"]');
+    const current = select.getAttribute('data-current') || hidden?.value;
+    const applyFont = (value) => {
+      const option = options.find((item) => item.getAttribute('data-value') === value);
+      if (!option) {
+        return;
+      }
+      button.textContent = option.textContent;
+      button.style.fontFamily = option.style.fontFamily;
+      hidden.value = value;
+    };
+    applyFont(current);
+    button.addEventListener('click', () => {
+      const isOpen = select.classList.contains('font-select--open');
+      closeAllSelects();
+      if (!isOpen) {
+        select.classList.add('font-select--open');
+      }
+    });
+    options.forEach((option) => {
+      option.addEventListener('click', () => {
+        const value = option.getAttribute('data-value');
+        if (value) {
+          applyFont(value);
+        }
+        select.classList.remove('font-select--open');
+      });
+    });
+  });
+</script>
+<script src="/static/js/screens.js"></script>
 {% endblock %}

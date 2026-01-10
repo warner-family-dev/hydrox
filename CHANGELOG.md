@@ -1,5 +1,24 @@
 ### Changelog
 
+## v0.0.3 - January 9, 2026
+
+- Select OLED mux channel before initializing SSD1306 to prevent I2C device not found errors.
+- Serve bundled OLED fonts for web previews in the Screen Updater.
+- Clamp manual fan overrides to a 250 RPM minimum (or off) across percent/RPM inputs.
+- Log manual fan overrides from the dashboard control.
+- Add linked RPM/percent readouts in the fan control modal with live calculations.
+- Add hover cursor/affordance for dashboard fan tiles.
+- Add dashboard fan tile modal for manual PWM/RPM overrides with calibration-aware validation.
+- Add OLED chain playlists with drag-and-drop ordering and per-screen rotation timing.
+- Publish OLED chains as playlists and turn panels off when a chain is empty.
+- Add OLED publish flow with luma.oled and PCA9548A channel selection.
+- Add font dropdown with bundled DejaVu and Liberation fonts for OLED rendering.
+- Add Publish button to send a saved screen to OLED 1-3.
+- Mount `/dev/i2c-1` for OLED access.
+- Render font names in the dropdown using their own typefaces.
+- Add OLED templates with live tokens, pixel shifting, inline edits, and per-OLED off controls.
+- Replace the font dropdown with a custom list that previews typefaces.
+
 ## v0.0.2 - January 9, 2026
 
 - Add Wi-Fi signal gauge to the admin status table and remove duplicate disk row.

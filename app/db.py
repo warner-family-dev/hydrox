@@ -54,11 +54,29 @@ def init_db() -> None:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,
                 message_template TEXT NOT NULL,
+                title_template TEXT,
+                value_template TEXT,
                 font_family TEXT NOT NULL,
+                title_font_family TEXT,
+                value_font_family TEXT,
                 font_size INTEGER NOT NULL,
+                title_font_size INTEGER,
+                value_font_size INTEGER,
                 rotation_seconds INTEGER NOT NULL,
                 tag TEXT,
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS oled_chains (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                oled_channel INTEGER NOT NULL,
+                screen_id INTEGER NOT NULL,
+                position INTEGER NOT NULL,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(oled_channel, screen_id)
             )
             """
         )
@@ -131,6 +149,12 @@ def init_db() -> None:
         )
         _ensure_column(conn, "fan_channels", "active", "INTEGER NOT NULL DEFAULT 1")
         _ensure_column(conn, "fan_channels", "max_rpm", "INTEGER")
+        _ensure_column(conn, "screens", "title_template", "TEXT")
+        _ensure_column(conn, "screens", "value_template", "TEXT")
+        _ensure_column(conn, "screens", "title_font_family", "TEXT")
+        _ensure_column(conn, "screens", "value_font_family", "TEXT")
+        _ensure_column(conn, "screens", "title_font_size", "INTEGER")
+        _ensure_column(conn, "screens", "value_font_size", "INTEGER")
         _ensure_column(conn, "sensors", "unit", "TEXT NOT NULL DEFAULT 'C'")
         _ensure_column(conn, "sensors", "active", "INTEGER NOT NULL DEFAULT 1")
         conn.commit()

@@ -22,6 +22,8 @@ from app.services.metrics import (
     recent_metrics,
     seed_metrics_if_empty,
 )
+from app.services.oled import ensure_web_fonts, list_font_choices, list_oled_channels
+from app.services.oled_manager import PlaylistScreen, list_token_definitions, start_oled_job, stop_oled_job
 from app.services.sensors import (
     format_temp,
     latest_sensor_readings,
@@ -76,6 +78,7 @@ def startup() -> None:
     seed_metrics_if_empty()
     seed_fans_if_empty()
     seed_sensors_if_empty()
+    ensure_web_fonts()
     branch, _ = get_git_status()
     logger = get_logger()
     logger.info("#######")
@@ -178,26 +181,129 @@ def screens(request: Request):
         rows = conn.execute(
             """
             SELECT id, name, message_template, font_family, font_size,
-                   rotation_seconds, tag, created_at
+                   rotation_seconds, tag, created_at, title_template,
+                   value_template, title_font_family, value_font_family,
+                   title_font_size, value_font_size
             FROM screens
             ORDER BY created_at DESC
             """
         ).fetchall()
+        chain_rows = conn.execute(
+            """
+            SELECT oc.oled_channel, oc.screen_id, oc.position,
+                   s.name, s.rotation_seconds
+            FROM oled_chains oc
+            JOIN screens s ON s.id = oc.screen_id
+            ORDER BY oc.oled_channel, oc.position
+            """
+        ).fetchall()
+    oled_channels = list_oled_channels()
+    chains: dict[int, list[dict]] = {}
+    chain_ids: dict[int, list[int]] = {oled["channel"]: [] for oled in oled_channels}
+    for row in chain_rows:
+        channel = row["oled_channel"]
+        item = {
+            "id": row["screen_id"],
+            "name": row["name"],
+            "rotation_seconds": row["rotation_seconds"],
+        }
+        chains.setdefault(channel, []).append(item)
+        chain_ids.setdefault(channel, []).append(row["screen_id"])
     return templates.TemplateResponse(
         "screens.html",
         {
             "request": request,
             "screens": [dict(row) for row in rows],
+            "fonts": list_font_choices(),
+            "oled_channels": oled_channels,
+            "tokens": list_token_definitions(),
+            "chains": chains,
+            "chain_ids": chain_ids,
         },
     )
+
+
+def _normalize_screen_ids(raw_ids: str | None) -> list[int]:
+    if not raw_ids:
+        return []
+    parsed: list[int] = []
+    seen: set[int] = set()
+    for item in raw_ids.split(","):
+        item = item.strip()
+        if not item:
+            continue
+        try:
+            value = int(item)
+        except ValueError:
+            continue
+        if value in seen:
+            continue
+        seen.add(value)
+        parsed.append(value)
+    return parsed
+
+
+def _save_oled_chain(conn, oled_channel: int, screen_ids: list[int]) -> list[int]:
+    if not screen_ids:
+        valid_ids: list[int] = []
+    else:
+        placeholders = ", ".join("?" for _ in screen_ids)
+        rows = conn.execute(
+            f"SELECT id FROM screens WHERE id IN ({placeholders})",
+            screen_ids,
+        ).fetchall()
+        valid_set = {row["id"] for row in rows}
+        valid_ids = [screen_id for screen_id in screen_ids if screen_id in valid_set]
+    conn.execute("DELETE FROM oled_chains WHERE oled_channel = ?", (oled_channel,))
+    for position, screen_id in enumerate(valid_ids, start=1):
+        conn.execute(
+            """
+            INSERT INTO oled_chains (oled_channel, screen_id, position)
+            VALUES (?, ?, ?)
+            """,
+            (oled_channel, screen_id, position),
+        )
+    return valid_ids
+
+
+def _load_oled_chain(conn, oled_channel: int) -> list[PlaylistScreen]:
+    rows = conn.execute(
+        """
+        SELECT s.name, s.title_template, s.value_template, s.message_template,
+               s.font_family, s.font_size, s.title_font_family, s.value_font_family,
+               s.title_font_size, s.value_font_size, s.rotation_seconds
+        FROM oled_chains oc
+        JOIN screens s ON s.id = oc.screen_id
+        WHERE oc.oled_channel = ?
+        ORDER BY oc.position
+        """,
+        (oled_channel,),
+    ).fetchall()
+    screens: list[PlaylistScreen] = []
+    for row in rows:
+        screens.append(
+            PlaylistScreen(
+                title_template=row["title_template"] or row["name"] or "",
+                value_template=row["value_template"] or row["message_template"] or "",
+                title_font=row["title_font_family"] or row["font_family"] or "DejaVu Sans Mono",
+                value_font=row["value_font_family"] or row["font_family"] or "DejaVu Sans Mono",
+                title_size=int(row["title_font_size"] or 16),
+                value_size=int(row["value_font_size"] or row["font_size"] or 22),
+                rotation_seconds=int(row["rotation_seconds"] or 15),
+            )
+        )
+    return screens
 
 
 @app.post("/screens")
 def create_screen(
     name: str = Form(...),
-    message_template: str = Form(...),
-    font_family: str = Form("IBM Plex Mono"),
-    font_size: int = Form(12),
+    title_template: str = Form(...),
+    value_template: str = Form(...),
+    title_font_family: str = Form("DejaVu Sans Mono"),
+    value_font_family: str = Form("DejaVu Sans Mono"),
+    title_font_size: int = Form(16),
+    value_font_size: int = Form(22),
     rotation_seconds: int = Form(15),
     tag: str = Form(""),
 ):
@@ -205,12 +311,120 @@ def create_screen(
         conn.execute(
             """
             INSERT INTO screens (name, message_template, font_family, font_size,
-                                 rotation_seconds, tag)
-            VALUES (?, ?, ?, ?, ?, ?)
+                                 rotation_seconds, tag, title_template, value_template,
+                                 title_font_family, value_font_family, title_font_size, value_font_size)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (name, message_template, font_family, font_size, rotation_seconds, tag or None),
+            (
+                name,
+                value_template,
+                value_font_family,
+                value_font_size,
+                rotation_seconds,
+                tag or None,
+                title_template,
+                value_template,
+                title_font_family,
+                value_font_family,
+                title_font_size,
+                value_font_size,
+            ),
         )
         conn.commit()
+    return RedirectResponse("/screens", status_code=303)
+
+
+@app.post("/screens/publish")
+def publish_oled_chain(
+    oled_channel: int = Form(...),
+    pixel_shift: str = Form("on"),
+    screen_ids: str = Form(""),
+):
+    with get_connection() as conn:
+        normalized = _normalize_screen_ids(screen_ids)
+        if screen_ids is not None:
+            _save_oled_chain(conn, oled_channel, normalized)
+            conn.commit()
+        screens = _load_oled_chain(conn, oled_channel)
+    if not screens:
+        stop_oled_job(int(oled_channel))
+        return RedirectResponse("/screens", status_code=303)
+    start_oled_job(
+        int(oled_channel),
+        screens,
+        pixel_shift == "on",
+    )
+    return RedirectResponse("/screens", status_code=303)
+
+
+@app.post("/screens/chains/update")
+def update_oled_chain(
+    oled_channel: int = Form(...),
+    screen_ids: str = Form(""),
+):
+    with get_connection() as conn:
+        normalized = _normalize_screen_ids(screen_ids)
+        _save_oled_chain(conn, oled_channel, normalized)
+        conn.commit()
+    return RedirectResponse("/screens", status_code=303)
+
+
+@app.post("/screens/update")
+def update_screen(
+    screen_id: int = Form(...),
+    name: str = Form(...),
+    title_template: str = Form(...),
+    value_template: str = Form(...),
+    title_font_family: str = Form(...),
+    value_font_family: str = Form(...),
+    title_font_size: int = Form(...),
+    value_font_size: int = Form(...),
+    rotation_seconds: int = Form(...),
+    tag: str = Form(""),
+):
+    with get_connection() as conn:
+        conn.execute(
+            """
+            UPDATE screens
+            SET name = ?, title_template = ?, value_template = ?,
+                title_font_family = ?, value_font_family = ?,
+                title_font_size = ?, value_font_size = ?,
+                rotation_seconds = ?, tag = ?, message_template = ?,
+                font_family = ?, font_size = ?
+            WHERE id = ?
+            """,
+            (
+                name,
+                title_template,
+                value_template,
+                title_font_family,
+                value_font_family,
+                title_font_size,
+                value_font_size,
+                rotation_seconds,
+                tag or None,
+                value_template,
+                value_font_family,
+                value_font_size,
+                screen_id,
+            ),
+        )
+        conn.commit()
+    return RedirectResponse("/screens", status_code=303)
+
+
+@app.post("/screens/delete")
+def delete_screen(screen_id: int = Form(...)):
+    with get_connection() as conn:
+        conn.execute("DELETE FROM screens WHERE id = ?", (screen_id,))
+        conn.execute("DELETE FROM oled_chains WHERE screen_id = ?", (screen_id,))
+        conn.commit()
+    return RedirectResponse("/screens", status_code=303)
+
+
+@app.post("/screens/off")
+def turn_off_oled(oled_channel: int = Form(...)):
+    stop_oled_job(int(oled_channel))
     return RedirectResponse("/screens", status_code=303)
 
 
@@ -371,6 +585,72 @@ def get_fan_percent(limit: int = 24):
 @app.get("/api/fans/latest")
 def get_latest_fan_rpms():
     return JSONResponse({"fans": latest_fan_readings()})
+
+
+@app.post("/api/fans/manual")
+def set_manual_fan_speed(
+    channel_index: int = Form(...),
+    mode: str = Form(...),
+    value: int = Form(...),
+):
+    logger = get_logger()
+    min_rpm = 250
+    fans = list_fans(active_only=True)
+    fan = next((item for item in fans if item["channel_index"] == channel_index), None)
+    if not fan:
+        return JSONResponse({"ok": False, "error": "Fan channel not found."}, status_code=404)
+    if mode not in {"percent", "rpm"}:
+        return JSONResponse({"ok": False, "error": "Invalid control mode."}, status_code=400)
+    if value < 0:
+        return JSONResponse({"ok": False, "error": "Value must be a whole number."}, status_code=400)
+
+    percent = None
+    if mode == "percent":
+        if value > 100:
+            return JSONResponse({"ok": False, "error": "Percent must be 0-100."}, status_code=400)
+        if value > 0 and fan.get("max_rpm"):
+            max_rpm = fan["max_rpm"]
+            if max_rpm and max_rpm > 0:
+                min_percent = min(100, int((min_rpm * 100 + max_rpm - 1) / max_rpm))
+                if value < min_percent:
+                    value = min_percent
+        percent = value
+    else:
+        max_rpm = fan.get("max_rpm")
+        if not max_rpm:
+            return JSONResponse(
+                {"ok": False, "error": "RPM control requires a calibrated max RPM."},
+                status_code=400,
+            )
+        if value > 0 and value < min_rpm:
+            value = min_rpm
+        if value > max_rpm:
+            return JSONResponse(
+                {"ok": False, "error": f"RPM cannot exceed {max_rpm}."},
+                status_code=400,
+            )
+        if max_rpm <= 0:
+            return JSONResponse({"ok": False, "error": "Invalid max RPM."}, status_code=400)
+        percent = max(0, min(100, round(value / max_rpm * 100)))
+
+    if not set_fan_speed(channel_index, int(percent)):
+        logger.error(
+            "manual fan override failed channel=%s mode=%s value=%s percent=%s",
+            channel_index,
+            mode,
+            value,
+            percent,
+        )
+        return JSONResponse({"ok": False, "error": "Failed to update fan speed."}, status_code=500)
+    logger.info(
+        "manual fan override channel=%s mode=%s value=%s percent=%s max_rpm=%s",
+        channel_index,
+        mode,
+        value,
+        percent,
+        fan.get("max_rpm"),
+    )
+    return JSONResponse({"ok": True, "percent": percent})
 
 
 @app.get("/api/calibration/status")
