@@ -41,6 +41,14 @@ def list_oled_channels() -> list[dict]:
     return [{"label": label, "channel": channel} for label, channel in OLED_CHANNELS.items()]
 
 
+def select_oled_channel(channel: int) -> None:
+    _select_channel(channel)
+
+
+def disable_oled_channel() -> None:
+    _disable_channel()
+
+
 def publish_screen(payload: ScreenPayload, channel: int) -> None:
     logger = get_logger()
     try:

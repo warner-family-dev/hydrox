@@ -1,6 +1,7 @@
 import random
 import threading
 import time
+from dataclasses import dataclass
 
 from luma.core.interface.serial import i2c
 from luma.core.render import canvas
@@ -11,23 +12,30 @@ from app.services.fan_metrics import latest_fan_readings, recent_cpu_fan_reading
 from app.services.fans import list_fans
 from app.services.logger import get_logger
 from app.services.metrics import latest_metrics
-from app.services.oled import FONT_CHOICES, I2C_BUS, OLED_ADDR, clear_screen
+from app.services.oled import FONT_CHOICES, I2C_BUS, OLED_ADDR, clear_screen, select_oled_channel
 from app.services.sensors import format_temp, latest_sensor_readings, list_sensors
 
 _active_jobs: dict[int, "OLEDJob"] = {}
 _lock = threading.Lock()
+_render_lock = threading.Lock()
+_REFRESH_SECONDS = 5
+
+
+@dataclass(frozen=True)
+class PlaylistScreen:
+    title_template: str
+    value_template: str
+    title_font: str
+    value_font: str
+    title_size: int
+    value_size: int
+    rotation_seconds: int
 
 
 class OLEDJob:
-    def __init__(self, channel: int, title: str, value: str, title_font: str, value_font: str,
-                 title_size: int, value_size: int, pixel_shift: bool) -> None:
+    def __init__(self, channel: int, screens: list[PlaylistScreen], pixel_shift: bool) -> None:
         self.channel = channel
-        self.title_template = title
-        self.value_template = value
-        self.title_font = title_font
-        self.value_font = value_font
-        self.title_size = title_size
-        self.value_size = value_size
+        self.screens = screens
         self.pixel_shift = pixel_shift
         self._stop_event = threading.Event()
         self._thread = threading.Thread(target=self._run, daemon=True)
@@ -41,41 +49,58 @@ class OLEDJob:
 
     def _run(self) -> None:
         logger = get_logger()
+        if not self.screens:
+            clear_screen(self.channel)
+            return
         try:
             serial = i2c(port=I2C_BUS, address=OLED_ADDR)
             device = ssd1306(serial, width=128, height=64)
         except Exception:
             logger.exception("oled job failed to initialize for channel %s", self.channel)
             return
-        title_font = _load_font(self.title_font, self.title_size)
-        value_font = _load_font(self.value_font, self.value_size)
+        font_cache: dict[tuple[str, int], ImageFont.FreeTypeFont] = {}
         shift_x = 0
         shift_y = 0
         next_shift = time.time() + 60
         while not self._stop_event.is_set():
-            if self.pixel_shift and time.time() >= next_shift:
-                shift_x = random.randint(-2, 2)
-                shift_y = random.randint(-2, 2)
-                next_shift = time.time() + 60
-            tokens = build_token_map()
-            title = render_template(self.title_template, tokens)
-            value = render_template(self.value_template, tokens)
-            try:
-                with canvas(device) as draw:
-                    draw.text((0 + shift_x, 0 + shift_y), title, font=title_font, fill=255)
-                    draw.text((0 + shift_x, 24 + shift_y), value, font=value_font, fill=255)
-            except Exception:
-                logger.exception("oled render failed for channel %s", self.channel)
-            self._stop_event.wait(5)
+            for screen in self.screens:
+                if self._stop_event.is_set():
+                    break
+                rotation_seconds = max(int(screen.rotation_seconds), 1)
+                end_at = time.time() + rotation_seconds
+                title_font = _cached_font(font_cache, screen.title_font, screen.title_size)
+                value_font = _cached_font(font_cache, screen.value_font, screen.value_size)
+                while time.time() < end_at and not self._stop_event.is_set():
+                    if self.pixel_shift and time.time() >= next_shift:
+                        shift_x = random.randint(-2, 2)
+                        shift_y = random.randint(-2, 2)
+                        next_shift = time.time() + 60
+                    elif not self.pixel_shift:
+                        shift_x = 0
+                        shift_y = 0
+                    tokens = build_token_map()
+                    title = render_template(screen.title_template, tokens)
+                    value = render_template(screen.value_template, tokens)
+                    try:
+                        with _render_lock:
+                            select_oled_channel(self.channel)
+                            with canvas(device) as draw:
+                                draw.text((0 + shift_x, 0 + shift_y), title, font=title_font, fill=255)
+                                draw.text((0 + shift_x, 24 + shift_y), value, font=value_font, fill=255)
+                    except Exception:
+                        logger.exception("oled render failed for channel %s", self.channel)
+                    remaining = end_at - time.time()
+                    if remaining <= 0:
+                        break
+                    self._stop_event.wait(min(_REFRESH_SECONDS, remaining))
 
 
-def start_oled_job(channel: int, title: str, value: str, title_font: str, value_font: str,
-                   title_size: int, value_size: int, pixel_shift: bool) -> None:
+def start_oled_job(channel: int, screens: list[PlaylistScreen], pixel_shift: bool) -> None:
     with _lock:
         existing = _active_jobs.get(channel)
         if existing:
             existing.stop()
-        job = OLEDJob(channel, title, value, title_font, value_font, title_size, value_size, pixel_shift)
+        job = OLEDJob(channel, screens, pixel_shift)
         _active_jobs[channel] = job
         job.start()
 
@@ -150,3 +175,12 @@ def list_token_definitions() -> list[dict]:
 def _load_font(key: str, size: int) -> ImageFont.FreeTypeFont:
     path = FONT_CHOICES.get(key) or FONT_CHOICES["DejaVu Sans Mono"]
     return ImageFont.truetype(path, size)
+
+
+def _cached_font(cache: dict[tuple[str, int], ImageFont.FreeTypeFont], key: str, size: int) -> ImageFont.FreeTypeFont:
+    cache_key = (key, size)
+    if cache_key in cache:
+        return cache[cache_key]
+    font = _load_font(key, size)
+    cache[cache_key] = font
+    return font

@@ -70,6 +70,18 @@ def init_db() -> None:
         )
         conn.execute(
             """
+            CREATE TABLE IF NOT EXISTS oled_chains (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                oled_channel INTEGER NOT NULL,
+                screen_id INTEGER NOT NULL,
+                position INTEGER NOT NULL,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(oled_channel, screen_id)
+            )
+            """
+        )
+        conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS fan_channels (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 channel_index INTEGER NOT NULL UNIQUE,

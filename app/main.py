@@ -23,7 +23,7 @@ from app.services.metrics import (
     seed_metrics_if_empty,
 )
 from app.services.oled import list_font_choices, list_oled_channels
-from app.services.oled_manager import list_token_definitions, start_oled_job, stop_oled_job
+from app.services.oled_manager import PlaylistScreen, list_token_definitions, start_oled_job, stop_oled_job
 from app.services.sensors import (
     format_temp,
     latest_sensor_readings,
@@ -187,16 +187,111 @@ def screens(request: Request):
             ORDER BY created_at DESC
             """
         ).fetchall()
+        chain_rows = conn.execute(
+            """
+            SELECT oc.oled_channel, oc.screen_id, oc.position,
+                   s.name, s.rotation_seconds
+            FROM oled_chains oc
+            JOIN screens s ON s.id = oc.screen_id
+            ORDER BY oc.oled_channel, oc.position
+            """
+        ).fetchall()
+    oled_channels = list_oled_channels()
+    chains: dict[int, list[dict]] = {}
+    chain_ids: dict[int, list[int]] = {oled["channel"]: [] for oled in oled_channels}
+    for row in chain_rows:
+        channel = row["oled_channel"]
+        item = {
+            "id": row["screen_id"],
+            "name": row["name"],
+            "rotation_seconds": row["rotation_seconds"],
+        }
+        chains.setdefault(channel, []).append(item)
+        chain_ids.setdefault(channel, []).append(row["screen_id"])
     return templates.TemplateResponse(
         "screens.html",
         {
             "request": request,
             "screens": [dict(row) for row in rows],
             "fonts": list_font_choices(),
-            "oled_channels": list_oled_channels(),
+            "oled_channels": oled_channels,
             "tokens": list_token_definitions(),
+            "chains": chains,
+            "chain_ids": chain_ids,
         },
     )
+
+
+def _normalize_screen_ids(raw_ids: str | None) -> list[int]:
+    if not raw_ids:
+        return []
+    parsed: list[int] = []
+    seen: set[int] = set()
+    for item in raw_ids.split(","):
+        item = item.strip()
+        if not item:
+            continue
+        try:
+            value = int(item)
+        except ValueError:
+            continue
+        if value in seen:
+            continue
+        seen.add(value)
+        parsed.append(value)
+    return parsed
+
+
+def _save_oled_chain(conn, oled_channel: int, screen_ids: list[int]) -> list[int]:
+    if not screen_ids:
+        valid_ids: list[int] = []
+    else:
+        placeholders = ", ".join("?" for _ in screen_ids)
+        rows = conn.execute(
+            f"SELECT id FROM screens WHERE id IN ({placeholders})",
+            screen_ids,
+        ).fetchall()
+        valid_set = {row["id"] for row in rows}
+        valid_ids = [screen_id for screen_id in screen_ids if screen_id in valid_set]
+    conn.execute("DELETE FROM oled_chains WHERE oled_channel = ?", (oled_channel,))
+    for position, screen_id in enumerate(valid_ids, start=1):
+        conn.execute(
+            """
+            INSERT INTO oled_chains (oled_channel, screen_id, position)
+            VALUES (?, ?, ?)
+            """,
+            (oled_channel, screen_id, position),
+        )
+    return valid_ids
+
+
+def _load_oled_chain(conn, oled_channel: int) -> list[PlaylistScreen]:
+    rows = conn.execute(
+        """
+        SELECT s.name, s.title_template, s.value_template, s.message_template,
+               s.font_family, s.font_size, s.title_font_family, s.value_font_family,
+               s.title_font_size, s.value_font_size, s.rotation_seconds
+        FROM oled_chains oc
+        JOIN screens s ON s.id = oc.screen_id
+        WHERE oc.oled_channel = ?
+        ORDER BY oc.position
+        """,
+        (oled_channel,),
+    ).fetchall()
+    screens: list[PlaylistScreen] = []
+    for row in rows:
+        screens.append(
+            PlaylistScreen(
+                title_template=row["title_template"] or row["name"] or "",
+                value_template=row["value_template"] or row["message_template"] or "",
+                title_font=row["title_font_family"] or row["font_family"] or "DejaVu Sans Mono",
+                value_font=row["value_font_family"] or row["font_family"] or "DejaVu Sans Mono",
+                title_size=int(row["title_font_size"] or 16),
+                value_size=int(row["value_font_size"] or row["font_size"] or 22),
+                rotation_seconds=int(row["rotation_seconds"] or 15),
+            )
+        )
+    return screens
 
 
 @app.post("/screens")
@@ -239,33 +334,37 @@ def create_screen(
 
 
 @app.post("/screens/publish")
-def publish_screen_to_oled(
-    screen_id: int = Form(...),
+def publish_oled_chain(
     oled_channel: int = Form(...),
     pixel_shift: str = Form("on"),
+    screen_ids: str = Form(""),
 ):
     with get_connection() as conn:
-        row = conn.execute(
-            """
-            SELECT name, title_template, value_template, message_template, font_family, font_size,
-                   title_font_family, value_font_family, title_font_size, value_font_size
-            FROM screens
-            WHERE id = ?
-            """,
-            (screen_id,),
-        ).fetchone()
-    if not row:
+        normalized = _normalize_screen_ids(screen_ids)
+        if screen_ids is not None:
+            _save_oled_chain(conn, oled_channel, normalized)
+            conn.commit()
+        screens = _load_oled_chain(conn, oled_channel)
+    if not screens:
+        stop_oled_job(int(oled_channel))
         return RedirectResponse("/screens", status_code=303)
     start_oled_job(
         int(oled_channel),
-        row["title_template"] or row["name"] if "name" in row.keys() else "",
-        row["value_template"] or row["message_template"] or "",
-        row["title_font_family"] or row["font_family"] or "DejaVu Sans Mono",
-        row["value_font_family"] or row["font_family"] or "DejaVu Sans Mono",
-        int(row["title_font_size"] or 16),
-        int(row["value_font_size"] or row["font_size"] or 22),
+        screens,
         pixel_shift == "on",
     )
+    return RedirectResponse("/screens", status_code=303)
+
+
+@app.post("/screens/chains/update")
+def update_oled_chain(
+    oled_channel: int = Form(...),
+    screen_ids: str = Form(""),
+):
+    with get_connection() as conn:
+        normalized = _normalize_screen_ids(screen_ids)
+        _save_oled_chain(conn, oled_channel, normalized)
+        conn.commit()
     return RedirectResponse("/screens", status_code=303)
 
 
@@ -317,6 +416,7 @@ def update_screen(
 def delete_screen(screen_id: int = Form(...)):
     with get_connection() as conn:
         conn.execute("DELETE FROM screens WHERE id = ?", (screen_id,))
+        conn.execute("DELETE FROM oled_chains WHERE screen_id = ?", (screen_id,))
         conn.commit()
     return RedirectResponse("/screens", status_code=303)
 

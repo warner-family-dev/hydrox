@@ -3,7 +3,7 @@
 <section class="hero">
   <div>
     <h1>Screen Updater</h1>
-    <p class="lead">Stage one message per OLED panel now, then add multi-message playlists later. Assign tags and rotation timing.</p>
+    <p class="lead">Build per-OLED playlists by chaining screens together. Each screen keeps its own rotation interval, and chains publish as a single playlist.</p>
   </div>
 </section>
 
@@ -131,19 +131,6 @@
             <input type="hidden" name="screen_id" value="{{ screen.id }}" />
           </form>
           <div class="list__meta">Saved {{ screen.created_at }}</div>
-          <form class="list__actions" method="post" action="/screens/publish">
-            <input type="hidden" name="screen_id" value="{{ screen.id }}" />
-            <select class="form__input" name="oled_channel" required>
-              {% for oled in oled_channels %}
-              <option value="{{ oled.channel }}">{{ oled.label }}</option>
-              {% endfor %}
-            </select>
-            <label class="toggle toggle--inline">
-              <input type="checkbox" name="pixel_shift" checked />
-              <span>Pixel shift</span>
-            </label>
-            <button class="button button--ghost" type="submit">Publish</button>
-          </form>
         </div>
         {% endfor %}
       {% else %}
@@ -155,16 +142,64 @@
 
 <section class="panel">
   <div class="panel__header">
-    <h2>OLED Controls</h2>
-    <span class="panel__tag">Off</span>
+    <h2>OLED Chains</h2>
+    <span class="panel__tag">Playlists</span>
   </div>
-  <div class="list__actions">
-    {% for oled in oled_channels %}
-    <form method="post" action="/screens/off">
-      <input type="hidden" name="oled_channel" value="{{ oled.channel }}" />
-      <button class="button button--ghost" type="submit">Turn off {{ oled.label }}</button>
-    </form>
-    {% endfor %}
+  <p class="panel__note">Drag screens into an OLED chain, reorder them, then publish the chain to the panel.</p>
+  <div class="chain-layout">
+    <div class="chain-library">
+      <div class="chain-library__title">Available Screens</div>
+      <div class="chain-library__list">
+        {% if screens %}
+          {% for screen in screens %}
+          <div class="chain-card" draggable="true" data-screen-card data-screen-id="{{ screen.id }}" data-screen-name="{{ screen.name }}" data-screen-duration="{{ screen.rotation_seconds }}">
+            <div class="chain-card__title">{{ screen.name }}</div>
+            <div class="chain-card__meta">{{ screen.rotation_seconds }}s</div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="empty">Save a screen to start building playlists.</div>
+        {% endif %}
+      </div>
+    </div>
+    <div class="chain-grid">
+      {% for oled in oled_channels %}
+      <form class="chain-panel" method="post" action="/screens/chains/update" data-chain-form>
+        <input type="hidden" name="oled_channel" value="{{ oled.channel }}" />
+        <input type="hidden" name="screen_ids" value="{{ chain_ids[oled.channel]|join(',') }}" data-chain-ids />
+        <div class="chain-panel__header">
+          <div>
+            <h3>{{ oled.label }}</h3>
+            <div class="chain-panel__sub">Drop screens here to build a chain.</div>
+          </div>
+          <button class="button button--ghost" type="submit">Save chain</button>
+        </div>
+        <div class="chain-list" data-chain-list data-oled-channel="{{ oled.channel }}">
+          {% if chains.get(oled.channel) %}
+            {% for item in chains.get(oled.channel) %}
+            <div class="chain-item" draggable="true" data-screen-id="{{ item.id }}">
+              <div>
+                <div class="chain-item__title">{{ item.name }}</div>
+                <div class="chain-item__meta">{{ item.rotation_seconds }}s</div>
+              </div>
+              <button class="chain-item__remove" type="button" aria-label="Remove screen">×</button>
+            </div>
+            {% endfor %}
+          {% else %}
+            <div class="chain-empty">Drop screens here to build a playlist.</div>
+          {% endif %}
+        </div>
+        <div class="chain-panel__footer">
+          <label class="toggle toggle--inline">
+            <input type="checkbox" name="pixel_shift" checked />
+            <span>Pixel shift</span>
+          </label>
+          <button class="button" type="submit" formaction="/screens/publish">Publish chain</button>
+          <button class="button button--ghost" type="submit" formaction="/screens/off">Turn off</button>
+        </div>
+      </form>
+      {% endfor %}
+    </div>
   </div>
 </section>
 <script>
@@ -210,4 +245,5 @@
     });
   });
 </script>
+<script src="/static/js/screens.js"></script>
 {% endblock %}
