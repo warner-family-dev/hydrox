@@ -120,6 +120,8 @@ def dashboard(request: Request):
         cpu_fan_percent = int(max(0, min(100, round(rpm / 8000 * 100))))
     fans = list_fans(active_only=True)
     pump_channel = get_pump_channel()
+    if pump_channel is None and metrics:
+        metrics["pump_percent"] = None
     liquidctl_status = "Connected" if has_liquidctl_devices() else "Not connected"
     sensors = list_sensors()
     readings = latest_sensor_readings()
@@ -555,6 +557,8 @@ def ingest_metrics(
 @app.get("/api/metrics/latest")
 def get_latest_metrics():
     metrics = latest_metrics() or {}
+    if get_pump_channel() is None:
+        metrics["pump_percent"] = None
     cpu_fan_percent = None
     cpu_fan_rows = recent_cpu_fan_readings(limit=1)
     if cpu_fan_rows:
@@ -903,6 +907,8 @@ def _cpu_fan_series(limit: int, max_rpm: int) -> list[float]:
 
 
 def _pump_series(limit: int) -> list[float]:
+    if get_pump_channel() is None:
+        return []
     rows = recent_metrics(limit=limit)
     return [row["pump_percent"] for row in rows if row["pump_percent"] is not None]
 
