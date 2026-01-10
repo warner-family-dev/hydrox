@@ -5,6 +5,7 @@
 - Try `iw`/nl80211 Wi-Fi signal polling before wpa_cli/sysfs fallbacks.
 - Add a Wi-Fi signal sidecar exporter for host-based signal reads.
 - Show Wi-Fi signal strength (dBm) alongside percent in Admin.
+- Keep Wi-Fi signal dBm in admin auto-refresh updates.
 
 ## v0.0.3 - January 9, 2026
 
