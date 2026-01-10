@@ -13,6 +13,7 @@
 - Replace dashboard System Pulse copy with live Liquidctl connection status.
 - Replace dashboard fan RPM tile with CPU fan percent (max 8000 RPM).
 - Remove fan chart legend so toggles are the only selectors.
+- Remove temperature chart legend in favor of toggle pills.
 
 ## v0.0.3 - January 9, 2026
 

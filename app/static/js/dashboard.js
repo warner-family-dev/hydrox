@@ -5,7 +5,6 @@ const grid = document.getElementById('trend-grid');
 const labels = document.getElementById('trend-labels');
 const fanGrid = document.getElementById('fan-grid');
 const fanLabels = document.getElementById('fan-labels');
-const tempLegend = document.querySelector('[data-legend="temperature"]');
 const tempTooltip = document.querySelector('[data-tooltip="temperature"]');
 const fanTooltip = document.querySelector('[data-tooltip="fan"]');
 const tempChart = document.querySelector('[data-chart="temperature"]');
@@ -641,28 +640,10 @@ const applyTempPalette = (series) => {
   });
 };
 
-const buildLegend = (container, items) => {
-  if (!container) {
-    return;
-  }
-  container.innerHTML = items
-    .map(
-      (item) =>
-        `<div class="legend__item"><span class="legend__swatch" style="--legend-color:${item.color}"></span>${item.label}</div>`
-    )
-    .join('');
-};
-
-const updateTempLegend = (series) => {
-  buildLegend(
-    tempLegend,
-    series.map((item) => ({ label: item.label, color: item.color }))
-  );
-};
 
 const updateLegends = () => {
   if (latestTempSeries.length) {
-    updateTempLegend(latestTempSeries);
+    // No-op: temperature legend removed.
   }
 };
 
