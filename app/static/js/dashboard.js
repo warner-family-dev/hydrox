@@ -471,7 +471,7 @@ modeButtons.forEach((button) => {
     if (!mode) {
       return;
     }
-    if (mode === 'rpm' && !modalState.maxRpm) {
+    if (mode === 'rpm' && !modalState.isPump && !modalState.maxRpm) {
       showModalError('RPM control requires a calibrated max RPM.');
       return;
     }
