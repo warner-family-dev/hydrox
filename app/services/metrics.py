@@ -1,3 +1,5 @@
+import os
+import re
 import subprocess
 from typing import Optional
 
@@ -99,3 +101,36 @@ def read_cpu_temp_vcgencmd() -> Optional[float]:
         return float(value)
     except ValueError:
         return None
+
+
+def read_nvme_temp_sensors() -> Optional[float]:
+    target = os.getenv("HYDROX_NVME_SENSOR_NAME", "nvme-pci-0100")
+    try:
+        result = subprocess.run(
+            ["sensors"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except FileNotFoundError:
+        return None
+    if result.returncode != 0:
+        return None
+    in_section = False
+    for line in result.stdout.splitlines():
+        if not line.strip():
+            if in_section:
+                break
+            continue
+        if line.strip() == target:
+            in_section = True
+            continue
+        if in_section:
+            if line.strip().startswith("Composite:"):
+                match = re.search(r"([+-]?\d+(?:\.\d+)?)°C", line)
+                if match:
+                    try:
+                        return float(match.group(1))
+                    except ValueError:
+                        return None
+    return None

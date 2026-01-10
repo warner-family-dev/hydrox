@@ -158,7 +158,7 @@ def build_token_map() -> dict[str, str]:
 def list_token_definitions() -> list[dict]:
     items = [
         {"label": "CPU Temp", "token": "{{cpu_temp}}"},
-        {"label": "Ambient Temp", "token": "{{ambient_temp}}"},
+        {"label": "NVMe Temp", "token": "{{ambient_temp}}"},
         {"label": "Pump Percent", "token": "{{pump_percent}}"},
     ]
     fans = list_fans()

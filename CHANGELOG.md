@@ -6,6 +6,7 @@
 - Add a Wi-Fi signal sidecar exporter for host-based signal reads.
 - Show Wi-Fi signal strength (dBm) alongside percent in Admin.
 - Keep Wi-Fi signal dBm in admin auto-refresh updates.
+- Replace ambient temp telemetry with NVMe temperature via lm-sensors.
 
 ## v0.0.3 - January 9, 2026
 

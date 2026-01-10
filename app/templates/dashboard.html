@@ -19,9 +19,9 @@
     <div class="metric-card__sub">Pi core</div>
   </div>
   <div class="metric-card">
-    <div class="metric-card__label">Ambient Temp</div>
+    <div class="metric-card__label">970 Pro SSD Temp</div>
     <div class="metric-card__value" data-metric="ambient_temp">{{ metrics.ambient_temp if metrics else "--" }}°C</div>
-    <div class="metric-card__sub">I2C sensors</div>
+    <div class="metric-card__sub">NVMe drive</div>
   </div>
   <div class="metric-card">
     <div class="metric-card__label">Fan RPM</div>
@@ -63,7 +63,7 @@
       </label>
       <label class="toggle">
         <input type="checkbox" data-target="ambient-line" checked />
-        <span>Ambient</span>
+        <span>970 Pro SSD</span>
       </label>
       {% for sensor in sensors %}
       <label class="toggle" data-series="sensor_{{ sensor.id }}">

@@ -25,7 +25,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR ${APP_HOME}
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates curl gnupg git build-essential libusb-1.0-0 wpasupplicant iw fonts-dejavu-core fonts-liberation \
+    && apt-get install -y --no-install-recommends ca-certificates curl gnupg git build-essential libusb-1.0-0 wpasupplicant iw lm-sensors fonts-dejavu-core fonts-liberation \
     && curl -fsSL https://archive.raspberrypi.org/debian/raspberrypi.gpg.key \
       | gpg --dearmor -o /usr/share/keyrings/raspberrypi-archive-keyring.gpg \
     && echo "deb [signed-by=/usr/share/keyrings/raspberrypi-archive-keyring.gpg] http://archive.raspberrypi.org/debian/ bookworm main" \

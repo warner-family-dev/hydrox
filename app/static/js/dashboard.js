@@ -222,7 +222,7 @@ const refreshTrend = async () => {
       tempSeries.push({ key: 'cpu', label: 'CPU', values: cpu, color: 'var(--accent)' });
     }
     if (ambient.length > 1) {
-      tempSeries.push({ key: 'ambient', label: 'Ambient', values: ambient, color: 'var(--alert)' });
+      tempSeries.push({ key: 'ambient', label: '970 Pro SSD', values: ambient, color: 'var(--alert)' });
     }
     sensorMeta.forEach((sensor, index) => {
       const key = `sensor_${sensor.id}`;
