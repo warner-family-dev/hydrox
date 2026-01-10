@@ -1,5 +1,7 @@
 ### Changelog
 
+## v0.0.5 - January 9, 2026
+
 ## v0.0.4 - January 9, 2026
 
 - Try `iw`/nl80211 Wi-Fi signal polling before wpa_cli/sysfs fallbacks.
