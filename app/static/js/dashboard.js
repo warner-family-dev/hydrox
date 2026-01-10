@@ -36,6 +36,8 @@ const modalState = {
   mode: 'percent',
 };
 
+const MIN_RPM = 250;
+
 const clampValue = (value, min, max) => Math.min(Math.max(value, min), max);
 
 const updateComputedDisplay = (input, value) => {
@@ -59,7 +61,10 @@ const syncComputedValues = () => {
       return;
     }
     const clamped = clampValue(percent, 0, 100);
-    const rpm = Math.round((modalState.maxRpm * clamped) / 100);
+    let rpm = Math.round((modalState.maxRpm * clamped) / 100);
+    if (clamped > 0 && rpm < MIN_RPM) {
+      rpm = MIN_RPM;
+    }
     updateComputedDisplay(fanModalRpm, rpm);
     return;
   }
@@ -68,7 +73,8 @@ const syncComputedValues = () => {
     updateComputedDisplay(fanModalPercent, null);
     return;
   }
-  const percent = Math.round((rpm / modalState.maxRpm) * 100);
+  const rpmForCalc = rpm > 0 && rpm < MIN_RPM ? MIN_RPM : rpm;
+  const percent = Math.round((rpmForCalc / modalState.maxRpm) * 100);
   updateComputedDisplay(fanModalPercent, clampValue(percent, 0, 100));
 };
 
@@ -141,7 +147,7 @@ const updateModeState = () => {
     } else if (modalState.mode === 'rpm' && modalState.maxRpm) {
       fanModalNote.textContent = `Max calibrated RPM: ${modalState.maxRpm}`;
     } else {
-      fanModalNote.textContent = 'Manual overrides can be replaced by profiles.';
+      fanModalNote.textContent = `Manual overrides can be replaced by profiles. RPM below ${MIN_RPM} will be bumped up.`;
     }
   }
   syncComputedValues();
@@ -469,10 +475,19 @@ fanModalSave?.addEventListener('click', async () => {
   }
   let value = null;
   if (modalState.mode === 'percent') {
-    const parsed = Number.parseInt(fanModalPercent?.value || '', 10);
+    let parsed = Number.parseInt(fanModalPercent?.value || '', 10);
     if (Number.isNaN(parsed) || parsed < 0 || parsed > 100) {
       showModalError('Enter a whole number between 0 and 100.');
       return;
+    }
+    if (parsed > 0 && modalState.maxRpm) {
+      const minPercent = Math.min(100, Math.ceil((MIN_RPM / modalState.maxRpm) * 100));
+      if (parsed < minPercent) {
+        parsed = minPercent;
+        if (fanModalPercent) {
+          fanModalPercent.value = String(minPercent);
+        }
+      }
     }
     value = parsed;
   } else {
@@ -480,10 +495,16 @@ fanModalSave?.addEventListener('click', async () => {
       showModalError('RPM control requires a calibrated max RPM.');
       return;
     }
-    const parsed = Number.parseInt(fanModalRpm?.value || '', 10);
+    let parsed = Number.parseInt(fanModalRpm?.value || '', 10);
     if (Number.isNaN(parsed) || parsed < 0) {
       showModalError('Enter a whole number RPM value.');
       return;
+    }
+    if (parsed > 0 && parsed < MIN_RPM) {
+      parsed = MIN_RPM;
+      if (fanModalRpm) {
+        fanModalRpm.value = String(MIN_RPM);
+      }
     }
     if (parsed > modalState.maxRpm) {
       showModalError(`RPM cannot exceed ${modalState.maxRpm}.`);
@@ -491,6 +512,7 @@ fanModalSave?.addEventListener('click', async () => {
     }
     value = parsed;
   }
+  syncComputedValues();
 
   const params = new URLSearchParams();
   params.set('channel_index', modalState.channel);

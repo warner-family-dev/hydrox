@@ -593,6 +593,7 @@ def set_manual_fan_speed(
     value: int = Form(...),
 ):
     logger = get_logger()
+    min_rpm = 250
     fans = list_fans(active_only=True)
     fan = next((item for item in fans if item["channel_index"] == channel_index), None)
     if not fan:
@@ -606,6 +607,12 @@ def set_manual_fan_speed(
     if mode == "percent":
         if value > 100:
             return JSONResponse({"ok": False, "error": "Percent must be 0-100."}, status_code=400)
+        if value > 0 and fan.get("max_rpm"):
+            max_rpm = fan["max_rpm"]
+            if max_rpm and max_rpm > 0:
+                min_percent = min(100, int((min_rpm * 100 + max_rpm - 1) / max_rpm))
+                if value < min_percent:
+                    value = min_percent
         percent = value
     else:
         max_rpm = fan.get("max_rpm")
@@ -614,6 +621,8 @@ def set_manual_fan_speed(
                 {"ok": False, "error": "RPM control requires a calibrated max RPM."},
                 status_code=400,
             )
+        if value > 0 and value < min_rpm:
+            value = min_rpm
         if value > max_rpm:
             return JSONResponse(
                 {"ok": False, "error": f"RPM cannot exceed {max_rpm}."},

@@ -2,6 +2,7 @@
 
 ## v0.0.3 - January 9, 2026
 
+- Clamp manual fan overrides to a 250 RPM minimum (or off) across percent/RPM inputs.
 - Log manual fan overrides from the dashboard control.
 - Add linked RPM/percent readouts in the fan control modal with live calculations.
 - Add hover cursor/affordance for dashboard fan tiles.
