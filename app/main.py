@@ -22,7 +22,7 @@ from app.services.fans import (
     update_fan_settings,
 )
 from app.services.git_info import get_git_status
-from app.services.liquidctl import set_fan_speed
+from app.services.liquidctl import has_liquidctl_devices, set_fan_speed
 from app.services.logger import get_logger, now_local
 from app.services.metrics import (
     latest_metrics,
@@ -115,6 +115,7 @@ def dashboard(request: Request):
     metrics = latest_metrics()
     fans = list_fans(active_only=True)
     pump_channel = get_pump_channel()
+    liquidctl_status = "Connected" if has_liquidctl_devices() else "Not connected"
     sensors = list_sensors()
     readings = latest_sensor_readings()
     sensor_cards = []
@@ -135,6 +136,7 @@ def dashboard(request: Request):
             "fans": fans,
             "pump_channel": pump_channel,
             "sensors": sensor_cards,
+            "liquidctl_status": liquidctl_status,
         },
     )
 

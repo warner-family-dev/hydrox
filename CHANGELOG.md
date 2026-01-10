@@ -10,6 +10,7 @@
 - Add a pump channel mapping in Settings with password-gated pump overrides.
 - Enforce pump overrides to 0 or >= 800 RPM (clamped) using a default max RPM.
 - Allow pump RPM overrides without calibration when the pump channel is selected.
+- Replace dashboard System Pulse copy with live Liquidctl connection status.
 
 ## v0.0.3 - January 9, 2026
 
