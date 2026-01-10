@@ -6,7 +6,6 @@ const labels = document.getElementById('trend-labels');
 const fanGrid = document.getElementById('fan-grid');
 const fanLabels = document.getElementById('fan-labels');
 const tempLegend = document.querySelector('[data-legend="temperature"]');
-const fanLegend = document.querySelector('[data-legend="fan"]');
 const tempTooltip = document.querySelector('[data-tooltip="temperature"]');
 const fanTooltip = document.querySelector('[data-tooltip="fan"]');
 const tempChart = document.querySelector('[data-chart="temperature"]');
@@ -665,23 +664,6 @@ const updateLegends = () => {
   if (latestTempSeries.length) {
     updateTempLegend(latestTempSeries);
   }
-
-  if (!fanLegend) {
-    return;
-  }
-  const fanItems = [];
-  const fanLines = Array.from(document.querySelectorAll('label[data-series^="fan_"]'));
-  fanLines.forEach((label, index) => {
-    const input = label.querySelector('input');
-    if (!input || input.disabled) {
-      return;
-    }
-    const color = fanPalette[index % fanPalette.length];
-    fanItems.push({ label: label.textContent.trim(), color });
-  });
-  fanItems.push({ label: 'CPU Fan', color: '#22c55e' });
-  fanItems.push({ label: 'Pump', color: '#f97316' });
-  buildLegend(fanLegend, fanItems);
 };
 
 const attachTooltip = (chart, tooltipEl, getSeries, unit) => {
