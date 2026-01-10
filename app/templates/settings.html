@@ -26,6 +26,25 @@
     </div>
     <button class="button" type="submit">Calibrate</button>
   </form>
+  <form class="settings-calibrate" method="post" action="/settings/pump">
+    <div class="settings-calibrate__body">
+      <div class="settings-calibrate__title">Pump channel mapping</div>
+      <div class="settings-calibrate__note">Select the fan channel that represents the pump PWM output.</div>
+    </div>
+    <div class="settings-pump">
+      <label class="settings-pump__option">
+        <input type="radio" name="pump_channel" value="none" {% if pump_channel is none %}checked{% endif %} />
+        <span>No pump mapped</span>
+      </label>
+      {% for fan in fans %}
+      <label class="settings-pump__option">
+        <input type="radio" name="pump_channel" value="{{ fan.channel_index }}" {% if pump_channel == fan.channel_index %}checked{% endif %} />
+        <span>Channel {{ fan.channel_index }} · {{ fan.name }}</span>
+      </label>
+      {% endfor %}
+    </div>
+    <button class="button button--ghost" type="submit">Set Pump</button>
+  </form>
   <div class="modal" id="calibrate-modal" aria-hidden="true">
     <div class="modal__backdrop"></div>
     <div class="modal__card">

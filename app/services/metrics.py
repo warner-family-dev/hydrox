@@ -69,7 +69,7 @@ def recent_metrics(limit: int = 12):
         return [dict(row) for row in reversed(rows)]
 
 
-def insert_metrics(cpu_temp: float, ambient_temp: float, fan_rpm: int, pump_percent: int) -> None:
+def insert_metrics(cpu_temp: float, ambient_temp: float, fan_rpm: int, pump_percent: int | None) -> None:
     with get_connection() as conn:
         conn.execute(
             """

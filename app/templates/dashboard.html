@@ -30,7 +30,9 @@
   </div>
   <div class="metric-card">
     <div class="metric-card__label">Pump %</div>
-    <div class="metric-card__value" data-metric="pump_percent">{{ metrics.pump_percent if metrics else "--" }}%</div>
+    <div class="metric-card__value" data-metric="pump_percent">
+      {% if metrics and metrics.pump_percent is not none %}{{ metrics.pump_percent }}%{% else %}--{% endif %}
+    </div>
     <div class="metric-card__sub">Remote PWM board</div>
   </div>
 </section>
@@ -105,7 +107,7 @@
     </div>
     <div class="fan-grid">
       {% for fan in fans %}
-      <div class="fan-tile" data-fan-channel="{{ fan.channel_index }}" data-fan-name="{{ fan.name }}" data-fan-max-rpm="{{ fan.max_rpm if fan.max_rpm else '' }}">
+      <div class="fan-tile" data-fan-channel="{{ fan.channel_index }}" data-fan-name="{{ fan.name }}" data-fan-max-rpm="{{ fan.max_rpm if fan.max_rpm else '' }}" data-is-pump="{{ 'true' if pump_channel == fan.channel_index else 'false' }}">
         <div class="fan-tile__title">{{ fan.name }}</div>
         <div class="fan-tile__value">-- RPM</div>
         <div class="fan-tile__sub">Awaiting live feed</div>
@@ -178,6 +180,11 @@
 
       <label class="form__label" for="fan-rpm-input">Target RPM</label>
       <input class="form__input" id="fan-rpm-input" type="number" min="0" step="1" value="0" data-input-rpm />
+
+      <div class="modal__row modal__row--hidden" data-pump-auth>
+        <label class="form__label" for="fan-admin-password">Admin password</label>
+        <input class="form__input" id="fan-admin-password" type="password" placeholder="admin" data-admin-password />
+      </div>
 
       <div class="modal__note" data-modal-note></div>
       <div class="modal__error" data-modal-error></div>

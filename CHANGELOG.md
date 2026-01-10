@@ -7,6 +7,7 @@
 - Show Wi-Fi signal strength (dBm) alongside percent in Admin.
 - Keep Wi-Fi signal dBm in admin auto-refresh updates.
 - Replace ambient temp telemetry with NVMe temperature via lm-sensors.
+- Add a pump channel mapping in Settings with password-gated pump overrides.
 
 ## v0.0.3 - January 9, 2026
 

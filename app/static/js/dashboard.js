@@ -25,6 +25,8 @@ const fanModalNote = fanModal?.querySelector('[data-modal-note]');
 const fanModalError = fanModal?.querySelector('[data-modal-error]');
 const fanModalPercent = fanModal?.querySelector('[data-input-percent]');
 const fanModalRpm = fanModal?.querySelector('[data-input-rpm]');
+const fanModalPassword = fanModal?.querySelector('[data-admin-password]');
+const fanModalPumpAuth = fanModal?.querySelector('[data-pump-auth]');
 const fanModalSave = fanModal?.querySelector('[data-modal-save]');
 const fanModalCancel = fanModal?.querySelector('[data-modal-cancel]');
 const modeButtons = fanModal?.querySelectorAll('[data-mode]') || [];
@@ -34,6 +36,7 @@ const modalState = {
   name: '',
   maxRpm: null,
   mode: 'percent',
+  isPump: false,
 };
 
 const MIN_RPM = 250;
@@ -86,6 +89,7 @@ const openFanModal = (tile) => {
   modalState.name = tile.getAttribute('data-fan-name') || `Fan ${modalState.channel}`;
   const maxRpmRaw = tile.getAttribute('data-fan-max-rpm');
   modalState.maxRpm = maxRpmRaw ? Number.parseInt(maxRpmRaw, 10) : null;
+  modalState.isPump = tile.getAttribute('data-is-pump') === 'true';
   modalState.mode = 'percent';
   if (fanModalFan) {
     fanModalFan.textContent = modalState.name;
@@ -96,6 +100,12 @@ const openFanModal = (tile) => {
   if (fanModalRpm) {
     fanModalRpm.value = modalState.maxRpm ? String(modalState.maxRpm) : '0';
     fanModalRpm.placeholder = modalState.maxRpm ? '' : '--';
+  }
+  if (fanModalPassword) {
+    fanModalPassword.value = '';
+  }
+  if (fanModalPumpAuth) {
+    fanModalPumpAuth.classList.toggle('modal__row--hidden', !modalState.isPump);
   }
   updateModeState();
   syncComputedValues();
@@ -165,6 +175,10 @@ const setMetricValue = (el, value) => {
   if (!key) {
     return;
   }
+  if (value === undefined || value === null) {
+    el.textContent = '--';
+    return;
+  }
   const formatter = metricFormatters[key];
   const formatted = formatter ? formatter(value) : value;
   el.textContent = formatted;
@@ -194,9 +208,6 @@ const refreshMetrics = async () => {
       metricEls.forEach((el) => {
         const key = el.getAttribute('data-metric');
         const value = data[key];
-        if (value === undefined || value === null) {
-          return;
-        }
         setMetricValue(el, value);
       });
     }
@@ -513,11 +524,21 @@ fanModalSave?.addEventListener('click', async () => {
     value = parsed;
   }
   syncComputedValues();
+  if (modalState.isPump) {
+    const password = fanModalPassword?.value || '';
+    if (!password) {
+      showModalError('Admin password required.');
+      return;
+    }
+  }
 
   const params = new URLSearchParams();
   params.set('channel_index', modalState.channel);
   params.set('mode', modalState.mode);
   params.set('value', String(value));
+  if (modalState.isPump && fanModalPassword) {
+    params.set('admin_password', fanModalPassword.value || '');
+  }
   try {
     const response = await fetch('/api/fans/manual', {
       method: 'POST',

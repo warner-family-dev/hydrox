@@ -3,6 +3,7 @@ from app.db import get_connection
 FAN_COUNT_KEY = "fan_count"
 ACTIVE_PROFILE_KEY = "active_profile_id"
 DEFAULT_FAN_COUNT = 7
+PUMP_CHANNEL_KEY = "pump_channel"
 
 
 def seed_settings_if_empty() -> None:
@@ -71,3 +72,34 @@ def set_active_profile_id(profile_id: int | None) -> None:
         set_setting(ACTIVE_PROFILE_KEY, "")
         return
     set_setting(ACTIVE_PROFILE_KEY, str(profile_id))
+
+
+def get_pump_channel() -> int | None:
+    value = get_setting(PUMP_CHANNEL_KEY)
+    if value in (None, ""):
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def set_pump_channel(channel_index: int | None) -> None:
+    if channel_index is None:
+        set_setting(PUMP_CHANNEL_KEY, "")
+        return
+    set_setting(PUMP_CHANNEL_KEY, str(channel_index))
+
+
+def get_fan_pwm(channel_index: int) -> int | None:
+    value = get_setting(f"fan_pwm_{channel_index}")
+    if value in (None, ""):
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def set_fan_pwm(channel_index: int, percent: int) -> None:
+    set_setting(f"fan_pwm_{channel_index}", str(percent))

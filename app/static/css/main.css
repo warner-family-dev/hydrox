@@ -710,6 +710,10 @@ body {
   gap: 10px;
 }
 
+.modal__row--hidden {
+  display: none;
+}
+
 .modal__note {
   font-size: 12px;
   color: var(--muted);
@@ -1049,6 +1053,20 @@ body {
   border-radius: 16px;
   background: rgba(10, 16, 24, 0.7);
   border: 1px solid rgba(59, 130, 246, 0.25);
+}
+
+.settings-pump {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.settings-pump__option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--text);
 }
 
 .settings-calibrate__title {
