@@ -62,9 +62,18 @@ def init_db() -> None:
                 font_size INTEGER NOT NULL,
                 title_font_size INTEGER,
                 value_font_size INTEGER,
-                brightness_percent INTEGER NOT NULL DEFAULT 100,
                 rotation_seconds INTEGER NOT NULL,
                 tag TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS oled_settings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                oled_channel INTEGER NOT NULL UNIQUE,
+                brightness_percent INTEGER NOT NULL DEFAULT 100,
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP
             )
             """
@@ -156,7 +165,6 @@ def init_db() -> None:
         _ensure_column(conn, "screens", "value_font_family", "TEXT")
         _ensure_column(conn, "screens", "title_font_size", "INTEGER")
         _ensure_column(conn, "screens", "value_font_size", "INTEGER")
-        _ensure_column(conn, "screens", "brightness_percent", "INTEGER NOT NULL DEFAULT 100")
         _ensure_column(conn, "sensors", "unit", "TEXT NOT NULL DEFAULT 'C'")
         _ensure_column(conn, "sensors", "active", "INTEGER NOT NULL DEFAULT 1")
         conn.commit()

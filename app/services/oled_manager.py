@@ -30,13 +30,13 @@ class PlaylistScreen:
     title_size: int
     value_size: int
     rotation_seconds: int
-    brightness_percent: int
 
 
 class OLEDJob:
-    def __init__(self, channel: int, screens: list[PlaylistScreen], pixel_shift: bool) -> None:
+    def __init__(self, channel: int, screens: list[PlaylistScreen], brightness_percent: int, pixel_shift: bool) -> None:
         self.channel = channel
         self.screens = screens
+        self.brightness_percent = brightness_percent
         self.pixel_shift = pixel_shift
         self._stop_event = threading.Event()
         self._thread = threading.Thread(target=self._run, daemon=True)
@@ -57,6 +57,8 @@ class OLEDJob:
             select_oled_channel(self.channel)
             serial = i2c(port=I2C_BUS, address=OLED_ADDR)
             device = ssd1306(serial, width=128, height=64)
+            brightness = int(max(0, min(100, self.brightness_percent)))
+            device.contrast(int(brightness / 100 * 255))
         except Exception:
             logger.exception("oled job failed to initialize for channel %s", self.channel)
             return
@@ -72,11 +74,6 @@ class OLEDJob:
                 end_at = time.time() + rotation_seconds
                 title_font = _cached_font(font_cache, screen.title_font, screen.title_size)
                 value_font = _cached_font(font_cache, screen.value_font, screen.value_size)
-                brightness = int(max(0, min(100, screen.brightness_percent)))
-                try:
-                    device.contrast(int(brightness / 100 * 255))
-                except Exception:
-                    logger.exception("oled contrast update failed for channel %s", self.channel)
                 while time.time() < end_at and not self._stop_event.is_set():
                     if self.pixel_shift and time.time() >= next_shift:
                         shift_x = random.randint(-2, 2)
@@ -102,12 +99,12 @@ class OLEDJob:
                     self._stop_event.wait(min(_REFRESH_SECONDS, remaining))
 
 
-def start_oled_job(channel: int, screens: list[PlaylistScreen], pixel_shift: bool) -> None:
+def start_oled_job(channel: int, screens: list[PlaylistScreen], brightness_percent: int, pixel_shift: bool) -> None:
     with _lock:
         existing = _active_jobs.get(channel)
         if existing:
             existing.stop()
-        job = OLEDJob(channel, screens, pixel_shift)
+        job = OLEDJob(channel, screens, brightness_percent, pixel_shift)
         _active_jobs[channel] = job
         job.start()
 
