@@ -1,5 +1,7 @@
 ### Changelog
 
+## v0.0.6 - January 11, 2026
+
 ## v0.0.5 - January 9, 2026
 
 - Hide pump percent when no pump channel is mapped.
