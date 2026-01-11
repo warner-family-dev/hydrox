@@ -3,6 +3,7 @@
 ## v0.0.6 - January 11, 2026
 
 - Make the header status dot green when admin status, liquidctl, and Wi-Fi are all healthy.
+- Add per-screen OLED brightness control for chain playback.
 
 ## v0.0.5 - January 9, 2026
 

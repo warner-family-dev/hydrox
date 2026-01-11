@@ -51,6 +51,9 @@
       <label class="form__label">Value Font Size</label>
       <input class="form__input" type="number" name="value_font_size" value="22" min="8" max="40" required />
 
+      <label class="form__label">Brightness (%)</label>
+      <input class="form__input" type="number" name="brightness_percent" value="100" min="0" max="100" required />
+
       <label class="form__label">Rotation Interval (seconds)</label>
       <input class="form__input" type="number" name="rotation_seconds" value="15" min="5" max="600" required />
 
@@ -115,6 +118,9 @@
 
             <label class="form__label">Value Font Size</label>
             <input class="form__input" type="number" name="value_font_size" value="{{ screen.value_font_size or screen.font_size }}" min="8" max="40" required />
+
+            <label class="form__label">Brightness (%)</label>
+            <input class="form__input" type="number" name="brightness_percent" value="{{ screen.brightness_percent or 100 }}" min="0" max="100" required />
 
             <label class="form__label">Rotation Interval (seconds)</label>
             <input class="form__input" type="number" name="rotation_seconds" value="{{ screen.rotation_seconds }}" min="5" max="600" required />

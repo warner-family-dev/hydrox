@@ -30,6 +30,7 @@ class PlaylistScreen:
     title_size: int
     value_size: int
     rotation_seconds: int
+    brightness_percent: int
 
 
 class OLEDJob:
@@ -71,6 +72,11 @@ class OLEDJob:
                 end_at = time.time() + rotation_seconds
                 title_font = _cached_font(font_cache, screen.title_font, screen.title_size)
                 value_font = _cached_font(font_cache, screen.value_font, screen.value_size)
+                brightness = int(max(0, min(100, screen.brightness_percent)))
+                try:
+                    device.contrast(int(brightness / 100 * 255))
+                except Exception:
+                    logger.exception("oled contrast update failed for channel %s", self.channel)
                 while time.time() < end_at and not self._stop_event.is_set():
                     if self.pixel_shift and time.time() >= next_shift:
                         shift_x = random.randint(-2, 2)

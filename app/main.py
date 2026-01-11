@@ -211,7 +211,7 @@ def screens(request: Request):
             SELECT id, name, message_template, font_family, font_size,
                    rotation_seconds, tag, created_at, title_template,
                    value_template, title_font_family, value_font_family,
-                   title_font_size, value_font_size
+                   title_font_size, value_font_size, brightness_percent
             FROM screens
             ORDER BY created_at DESC
             """
@@ -299,7 +299,7 @@ def _load_oled_chain(conn, oled_channel: int) -> list[PlaylistScreen]:
         """
         SELECT s.name, s.title_template, s.value_template, s.message_template,
                s.font_family, s.font_size, s.title_font_family, s.value_font_family,
-               s.title_font_size, s.value_font_size, s.rotation_seconds
+               s.title_font_size, s.value_font_size, s.rotation_seconds, s.brightness_percent
         FROM oled_chains oc
         JOIN screens s ON s.id = oc.screen_id
         WHERE oc.oled_channel = ?
@@ -318,6 +318,7 @@ def _load_oled_chain(conn, oled_channel: int) -> list[PlaylistScreen]:
                 title_size=int(row["title_font_size"] or 16),
                 value_size=int(row["value_font_size"] or row["font_size"] or 22),
                 rotation_seconds=int(row["rotation_seconds"] or 15),
+                brightness_percent=int(row["brightness_percent"] or 100),
             )
         )
     return screens
@@ -332,6 +333,7 @@ def create_screen(
     value_font_family: str = Form("DejaVu Sans Mono"),
     title_font_size: int = Form(16),
     value_font_size: int = Form(22),
+    brightness_percent: int = Form(100),
     rotation_seconds: int = Form(15),
     tag: str = Form(""),
 ):
@@ -340,8 +342,9 @@ def create_screen(
             """
             INSERT INTO screens (name, message_template, font_family, font_size,
                                  rotation_seconds, tag, title_template, value_template,
-                                 title_font_family, value_font_family, title_font_size, value_font_size)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                 title_font_family, value_font_family, title_font_size, value_font_size,
+                                 brightness_percent)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 name,
@@ -356,6 +359,7 @@ def create_screen(
                 value_font_family,
                 title_font_size,
                 value_font_size,
+                max(0, min(100, brightness_percent)),
             ),
         )
         conn.commit()
@@ -407,6 +411,7 @@ def update_screen(
     value_font_family: str = Form(...),
     title_font_size: int = Form(...),
     value_font_size: int = Form(...),
+    brightness_percent: int = Form(100),
     rotation_seconds: int = Form(...),
     tag: str = Form(""),
 ):
@@ -417,7 +422,7 @@ def update_screen(
             SET name = ?, title_template = ?, value_template = ?,
                 title_font_family = ?, value_font_family = ?,
                 title_font_size = ?, value_font_size = ?,
-                rotation_seconds = ?, tag = ?, message_template = ?,
+                brightness_percent = ?, rotation_seconds = ?, tag = ?, message_template = ?,
                 font_family = ?, font_size = ?
             WHERE id = ?
             """,
@@ -429,6 +434,7 @@ def update_screen(
                 value_font_family,
                 title_font_size,
                 value_font_size,
+                max(0, min(100, brightness_percent)),
                 rotation_seconds,
                 tag or None,
                 value_template,
