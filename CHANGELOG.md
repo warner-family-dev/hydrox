@@ -5,6 +5,7 @@
 - Hide pump percent when no pump channel is mapped.
 - Add dashboard Wi-Fi signal gauge tile.
 - Reduce Wi-Fi gauge size to avoid overlapping status text.
+- Make the header status dot green when admin status, liquidctl, and Wi-Fi are all healthy.
 ## v0.0.4 - January 9, 2026
 
 - Try `iw`/nl80211 Wi-Fi signal polling before wpa_cli/sysfs fallbacks.
