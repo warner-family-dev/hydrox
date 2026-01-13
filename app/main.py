@@ -89,26 +89,30 @@ async def log_exceptions(request: Request, call_next):
 
 @app.on_event("startup")
 def startup() -> None:
-    set_image_start_time(time.time())
-    init_db()
-    seed_settings_if_empty()
-    seed_metrics_if_empty()
-    seed_fans_if_empty()
-    seed_sensors_if_empty()
-    default_profile_id = get_default_profile_id()
-    set_active_profile_id(default_profile_id)
-    ensure_web_fonts()
-    _start_oled_on_boot()
-    branch, _ = get_git_status()
     logger = get_logger()
-    logger.info("#######")
-    logger.info(
-        "System has been started - current boot time is %s and code version is %s",
-        now_local(),
-        branch,
-    )
-    logger.info("#######")
-    start_daemon()
+    try:
+        set_image_start_time(time.time())
+        init_db()
+        seed_settings_if_empty()
+        seed_metrics_if_empty()
+        seed_fans_if_empty()
+        seed_sensors_if_empty()
+        default_profile_id = get_default_profile_id()
+        set_active_profile_id(default_profile_id)
+        ensure_web_fonts()
+        _start_oled_on_boot()
+        branch, _ = get_git_status()
+        logger.info("#######")
+        logger.info(
+            "System has been started - current boot time is %s and code version is %s",
+            now_local(),
+            branch,
+        )
+        logger.info("#######")
+        start_daemon()
+    except Exception:
+        logger.exception("application startup failed")
+        raise
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -428,6 +432,20 @@ def _load_oled_settings(conn, oled_channel: int) -> dict:
             "publish_on_startup": False,
             "sync_playback": False,
         }
+    try:
+        return {
+            "brightness_percent": max(0, min(100, int(row["brightness_percent"]))),
+            "pixel_shift": _read_flag(row["pixel_shift"], default=True),
+            "publish_on_startup": _read_flag(row["publish_on_startup"], default=False),
+            "sync_playback": _read_flag(row["sync_playback"], default=False),
+        }
+    except (TypeError, ValueError):
+        return {
+            "brightness_percent": 100,
+            "pixel_shift": True,
+            "publish_on_startup": False,
+            "sync_playback": False,
+        }
 
 
 def _restart_synced_oled_jobs(start_time: float) -> None:
@@ -522,20 +540,6 @@ def _start_oled_on_boot() -> None:
                 settings.get("pixel_shift", True),
                 start_time=start_time,
             )
-    try:
-        return {
-            "brightness_percent": max(0, min(100, int(row["brightness_percent"]))),
-            "pixel_shift": _read_flag(row["pixel_shift"], default=True),
-            "publish_on_startup": _read_flag(row["publish_on_startup"], default=False),
-            "sync_playback": _read_flag(row["sync_playback"], default=False),
-        }
-    except (TypeError, ValueError):
-        return {
-            "brightness_percent": 100,
-            "pixel_shift": True,
-            "publish_on_startup": False,
-            "sync_playback": False,
-        }
 
 
 @app.post("/screens")

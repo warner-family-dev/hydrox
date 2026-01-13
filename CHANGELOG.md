@@ -16,6 +16,7 @@
 - Label the profile curve axes and expand the sensor/fan controls to full width.
 - Add OLED chain options for startup publishing and synced playback with per-OLED pixel shift.
 - Add axis tick labels on the profile curve editor grid.
+- Fix OLED startup initialization error and log startup failures to hydrox.log.
 
 ## v0.0.6 - January 11, 2026
 
