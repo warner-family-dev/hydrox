@@ -23,6 +23,7 @@
 - Allow in-place profile editing from saved profile cards and show the profile loop interval.
 - Place saved profile actions on a single row.
 - Remove the default profile radio and show a Default badge in profile cards.
+- Retry OLED device initialization after render failures to recover from I2C errors.
 
 ## v0.0.6 - January 11, 2026
 

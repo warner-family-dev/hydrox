@@ -61,15 +61,7 @@ class OLEDJob:
         if not self.screens:
             clear_screen(self.channel)
             return
-        try:
-            select_oled_channel(self.channel)
-            serial = i2c(port=I2C_BUS, address=OLED_ADDR)
-            device = ssd1306(serial, width=128, height=64)
-            brightness = int(max(0, min(100, self.brightness_percent)))
-            device.contrast(int(brightness / 100 * 255))
-        except Exception:
-            logger.exception("oled job failed to initialize for channel %s", self.channel)
-            return
+        device = None
         font_cache: dict[tuple[str, int], ImageFont.FreeTypeFont] = {}
         shift_x = 0
         shift_y = 0
@@ -87,6 +79,11 @@ class OLEDJob:
                 title_font = _cached_font(font_cache, screen.title_font, screen.title_size)
                 value_font = _cached_font(font_cache, screen.value_font, screen.value_size)
                 while time.time() < end_at and not self._stop_event.is_set():
+                    if device is None:
+                        device = self._init_device(logger)
+                        if device is None:
+                            self._stop_event.wait(2)
+                            continue
                     if self.pixel_shift and time.time() >= next_shift:
                         shift_x = random.randint(-2, 2)
                         shift_y = random.randint(-2, 2)
@@ -105,10 +102,23 @@ class OLEDJob:
                                 draw.text((0 + shift_x, 24 + shift_y), value, font=value_font, fill=255)
                     except Exception:
                         logger.exception("oled render failed for channel %s", self.channel)
+                        device = None
                     remaining = end_at - time.time()
                     if remaining <= 0:
                         break
                     self._stop_event.wait(min(_REFRESH_SECONDS, remaining))
+
+    def _init_device(self, logger) -> ssd1306 | None:
+        try:
+            select_oled_channel(self.channel)
+            serial = i2c(port=I2C_BUS, address=OLED_ADDR)
+            device = ssd1306(serial, width=128, height=64)
+            brightness = int(max(0, min(100, self.brightness_percent)))
+            device.contrast(int(brightness / 100 * 255))
+            return device
+        except Exception:
+            logger.exception("oled job failed to initialize for channel %s", self.channel)
+            return None
 
 
 def start_oled_job(
