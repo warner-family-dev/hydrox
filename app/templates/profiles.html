@@ -137,6 +137,9 @@
             {% if active_profile_id == profile.id %}
             <span class="list__badge">Active</span>
             {% endif %}
+            {% if default_profile_id == profile.id %}
+            <span class="list__badge list__badge--default">Default</span>
+            {% endif %}
           </div>
           <div class="list__meta">{{ profile.created_at }}</div>
           <div class="list__body">Curve: {{ profile.curve_json }}</div>
@@ -160,10 +163,6 @@
             </button>
             <form method="post" action="/profiles/default">
               <input type="hidden" name="profile_id" value="{{ profile.id }}" />
-              <label class="profile-default">
-                <input type="radio" name="default_profile" value="{{ profile.id }}" {% if default_profile_id == profile.id %}checked{% endif %} />
-                <span>Default on boot</span>
-              </label>
               <button class="button button--ghost" type="submit">Set Default</button>
             </form>
           </div>
