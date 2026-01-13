@@ -28,7 +28,10 @@
   <table class="status-table">
     <tr>
       <th>Status</th>
-      <td class="status-cell"><span class="status-dot status-dot--ok"></span><span data-admin-field="status">{{ status.status }}</span></td>
+      <td class="status-cell">
+        <span class="status-dot {% if status.status == "Warning" %}status-dot--warn{% else %}status-dot--ok{% endif %}" data-admin-status-dot></span>
+        <span data-admin-field="status">{{ status.status }}</span>
+      </td>
     </tr>
     <tr>
       <th>Host Uptime</th>
@@ -72,6 +75,20 @@
     <tr>
       <th>Liquidctl</th>
       <td data-admin-field="liquidctl">{{ status.liquidctl }}</td>
+    </tr>
+    <tr>
+      <th>Throttled</th>
+      <td data-admin-field="throttled">
+        {% if status.throttled.raw %}
+          {% if status.throttled.ok %}
+          {{ status.throttled.raw }} (OK)
+          {% else %}
+          {{ status.throttled.raw }} · {{ status.throttled.issues | join(", ") }}
+          {% endif %}
+        {% else %}
+        unknown
+        {% endif %}
+      </td>
     </tr>
   </table>
 </section>

@@ -18,6 +18,7 @@
 - Add axis tick labels on the profile curve editor grid.
 - Fix OLED startup initialization error and log startup failures to hydrox.log.
 - Shift the profile curve Y-axis title left to avoid tick overlap.
+- Add vcgencmd throttling status checks to Admin with warning states.
 
 ## v0.0.6 - January 11, 2026
 

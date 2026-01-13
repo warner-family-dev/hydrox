@@ -10,6 +10,17 @@ from pathlib import Path
 from app.services.liquidctl import has_liquidctl_devices
 from app.services.logger import get_logger
 
+_THROTTLE_BITS = {
+    0: "Under-voltage detected",
+    1: "Arm frequency capped",
+    2: "Currently throttled",
+    3: "Soft temperature limit active",
+    16: "Under-voltage has occurred",
+    17: "Arm frequency capped has occurred",
+    18: "Throttling has occurred",
+    19: "Soft temperature limit has occurred",
+}
+
 
 def _read_proc(path: str) -> str:
     return Path(path).read_text(encoding="utf-8").strip()
@@ -418,9 +429,44 @@ def _signal_to_percent(signal_dbm: int) -> int:
     return int(max(0, min(100, normalized)))
 
 
+def get_throttled_status() -> dict:
+    logger = get_logger()
+    try:
+        result = subprocess.run(
+            ["vcgencmd", "get_throttled"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except FileNotFoundError:
+        logger.error("vcgencmd get_throttled unavailable")
+        return {"raw": None, "ok": None, "issues": []}
+    if result.returncode != 0:
+        logger.error("vcgencmd get_throttled failed: %s", result.stderr.strip() or result.stdout.strip())
+        return {"raw": None, "ok": None, "issues": []}
+    output = result.stdout.strip()
+    if "throttled=" not in output:
+        logger.error("vcgencmd get_throttled parse error: %s", output)
+        return {"raw": None, "ok": None, "issues": []}
+    raw = output.split("throttled=", 1)[1].strip()
+    try:
+        value = int(raw, 16)
+    except ValueError:
+        logger.error("vcgencmd get_throttled invalid hex: %s", raw)
+        return {"raw": None, "ok": None, "issues": []}
+    if value == 0:
+        return {"raw": raw, "ok": True, "issues": []}
+    issues = [label for bit, label in _THROTTLE_BITS.items() if value & (1 << bit)]
+    return {"raw": raw, "ok": False, "issues": issues}
+
+
 def get_status_payload() -> dict:
+    throttled = get_throttled_status()
+    status = "Ok"
+    if throttled.get("ok") is False:
+        status = "Warning"
     return {
-        "status": "Ok",
+        "status": status,
         "host_uptime": get_uptime(),
         "image_uptime": get_image_uptime(),
         "cpu": get_cpu_usage(),
@@ -428,4 +474,5 @@ def get_status_payload() -> dict:
         "disk_data": get_disk_usage("/data"),
         "liquidctl": get_liquidctl_status(),
         "wifi": get_wifi_strength(),
+        "throttled": throttled,
     }

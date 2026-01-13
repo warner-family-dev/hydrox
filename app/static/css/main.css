@@ -89,6 +89,11 @@ body {
   box-shadow: 0 0 12px rgba(34, 197, 94, 0.65);
 }
 
+.brand__dot--warn {
+  background: #facc15;
+  box-shadow: 0 0 12px rgba(250, 204, 21, 0.65);
+}
+
 .brand__title {
   font-family: "Space Grotesk", "IBM Plex Mono", sans-serif;
   font-size: 20px;
@@ -319,6 +324,11 @@ body {
 .status-dot--ok {
   background: #2dd4bf;
   box-shadow: 0 0 8px rgba(45, 212, 191, 0.5);
+}
+
+.status-dot--warn {
+  background: #facc15;
+  box-shadow: 0 0 8px rgba(250, 204, 21, 0.5);
 }
 
 .wifi-meter {

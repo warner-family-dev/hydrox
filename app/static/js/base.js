@@ -11,9 +11,12 @@ const updateStatusDot = async () => {
     }
     const data = await response.json();
     const ok = data.status === 'Ok';
+    const warning = data.status === 'Warning';
     const liquidctlOk = data.liquidctl === 'Connected';
     const wifiOk = data.wifi?.percent !== null && data.wifi?.percent !== undefined;
-    statusDot.classList.toggle('brand__dot--ok', ok && liquidctlOk && wifiOk);
+    const fullyOk = ok && liquidctlOk && wifiOk;
+    statusDot.classList.toggle('brand__dot--ok', fullyOk);
+    statusDot.classList.toggle('brand__dot--warn', warning && !fullyOk);
   } catch (error) {
     // Ignore transient failures.
   }

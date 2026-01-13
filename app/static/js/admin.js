@@ -28,6 +28,32 @@ const renderWifi = (wifi) => {
   `;
 };
 
+const renderThrottled = (throttled) => {
+  if (!throttled) {
+    updateText("throttled", "unknown");
+    return;
+  }
+  if (!throttled.raw) {
+    updateText("throttled", "unknown");
+    return;
+  }
+  if (throttled.ok) {
+    updateText("throttled", `${throttled.raw} (OK)`);
+    return;
+  }
+  const issues = Array.isArray(throttled.issues) ? throttled.issues.join(", ") : "";
+  updateText("throttled", `${throttled.raw}${issues ? ` · ${issues}` : ""}`);
+};
+
+const updateStatusDot = (status) => {
+  const dot = document.querySelector("[data-admin-status-dot]");
+  if (!dot) {
+    return;
+  }
+  dot.classList.toggle("status-dot--ok", status === "Ok");
+  dot.classList.toggle("status-dot--warn", status === "Warning");
+};
+
 const refreshStatus = async () => {
   try {
     const response = await fetch("/api/admin/status");
@@ -36,6 +62,7 @@ const refreshStatus = async () => {
     }
     const data = await response.json();
     updateText("status", data.status ?? "unknown");
+    updateStatusDot(data.status);
     updateText("host_uptime", data.host_uptime ?? "unknown");
     updateText("image_uptime", data.image_uptime ?? "unknown");
     updateText("cpu", data.cpu ?? "unknown");
@@ -44,6 +71,7 @@ const refreshStatus = async () => {
     updateText("liquidctl", data.liquidctl ?? "unknown");
     updateText("wifi_interface", data.wifi?.interface ?? "wlan0");
     renderWifi(data.wifi);
+    renderThrottled(data.throttled);
   } catch (err) {
     // Silent: avoid spam on transient API failures.
   }
