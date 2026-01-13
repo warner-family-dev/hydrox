@@ -12,6 +12,8 @@
 - Show the active profile in the dashboard hero card.
 - Group optional profile settings into a collapsible section with clearer field grouping.
 - Move the profile curve editor into a larger modal window for easier editing.
+- Show mini curve previews in mapped profile rules and reopen the editor on click.
+- Label the profile curve axes and expand the sensor/fan controls to full width.
 
 ## v0.0.6 - January 11, 2026
 

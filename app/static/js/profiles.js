@@ -29,6 +29,18 @@ const chartViewBox = {
   height: 520,
 };
 
+const previewBounds = {
+  left: 40,
+  right: 500,
+  top: 20,
+  bottom: 280,
+};
+
+const previewViewBox = {
+  width: 520,
+  height: 320,
+};
+
 const rules = [];
 let activeRuleIndex = null;
 let editRuleIndex = null;
@@ -57,9 +69,9 @@ const renderGrid = () => {
   chartGrid.innerHTML = lines.join('');
 };
 
-const scaleToChart = (temp, fan) => {
-  const x = chartBounds.left + ((chartBounds.right - chartBounds.left) * temp) / 100;
-  const y = chartBounds.bottom - ((chartBounds.bottom - chartBounds.top) * fan) / 100;
+const scaleToChart = (temp, fan, bounds) => {
+  const x = bounds.left + ((bounds.right - bounds.left) * temp) / 100;
+  const y = bounds.bottom - ((bounds.bottom - bounds.top) * fan) / 100;
   return { x, y };
 };
 
@@ -74,6 +86,46 @@ const scaleFromChart = (x, y) => {
 
 const sortPoints = (points) => [...points].sort((a, b) => a.temp - b.temp);
 
+const renderMiniChart = (rule) => {
+  const sorted = sortPoints(rule.points || []);
+  if (!sorted.length) {
+    return '';
+  }
+  const gridLines = [];
+  for (let i = 0; i <= 4; i += 1) {
+    const x = previewBounds.left + ((previewBounds.right - previewBounds.left) / 4) * i;
+    const y = previewBounds.top + ((previewBounds.bottom - previewBounds.top) / 4) * i;
+    gridLines.push(`<line x1="${x}" y1="${previewBounds.top}" x2="${x}" y2="${previewBounds.bottom}" />`);
+    gridLines.push(`<line x1="${previewBounds.left}" y1="${y}" x2="${previewBounds.right}" y2="${y}" />`);
+  }
+  const polyline = sorted
+    .map((point) => {
+      const coords = scaleToChart(point.temp, point.fan, previewBounds);
+      return `${coords.x.toFixed(1)},${coords.y.toFixed(1)}`;
+    })
+    .join(' ');
+  const points = sorted
+    .map((point) => {
+      const coords = scaleToChart(point.temp, point.fan, previewBounds);
+      return `<circle cx="${coords.x}" cy="${coords.y}" r="4" />`;
+    })
+    .join('');
+
+  return `
+    <div class="profile-rule__chart">
+      <svg viewBox="0 0 ${previewViewBox.width} ${previewViewBox.height}" class="profile-rule__svg" aria-hidden="true">
+        <g class="profile-rule__grid">${gridLines.join('')}</g>
+        <g class="profile-rule__axes">
+          <line x1="${previewBounds.left}" y1="${previewBounds.top}" x2="${previewBounds.left}" y2="${previewBounds.bottom}" />
+          <line x1="${previewBounds.left}" y1="${previewBounds.bottom}" x2="${previewBounds.right}" y2="${previewBounds.bottom}" />
+        </g>
+        <polyline class="profile-rule__line" fill="none" stroke="var(--accent)" stroke-width="2" points="${polyline}" />
+        <g class="profile-rule__points">${points}</g>
+      </svg>
+    </div>
+  `;
+};
+
 const renderRules = () => {
   if (!rulesContainer) {
     return;
@@ -86,11 +138,13 @@ const renderRules = () => {
     .map((rule, index) => {
       const fanLabel = rule.fan_channels.map((fan) => `Fan ${fan}`).join(', ');
       const activeClass = index === activeRuleIndex ? 'profile-rule--active' : '';
+      const miniChart = renderMiniChart(rule);
       return `
         <button type="button" class="profile-rule ${activeClass}" data-rule-index="${index}">
           <div class="profile-rule__title">${sensorLabel(rule.sensor_id)}</div>
           <div class="profile-rule__meta">${fanLabel}</div>
           <div class="profile-rule__meta">${rule.points.length} points</div>
+          ${miniChart}
         </button>
       `;
     })
@@ -108,13 +162,13 @@ const renderChart = () => {
   }
   const sorted = sortPoints(draftPoints);
   const polylinePoints = sorted.map((point) => {
-    const coords = scaleToChart(point.temp, point.fan);
+    const coords = scaleToChart(point.temp, point.fan, chartBounds);
     return `${coords.x.toFixed(1)},${coords.y.toFixed(1)}`;
   });
   chartLine.setAttribute('points', polylinePoints.join(' '));
   chartPoints.innerHTML = sorted
     .map((point) => {
-      const coords = scaleToChart(point.temp, point.fan);
+      const coords = scaleToChart(point.temp, point.fan, chartBounds);
       return `<circle cx="${coords.x}" cy="${coords.y}" r="6" data-temp="${point.temp}" data-fan="${point.fan}" />`;
     })
     .join('');
@@ -239,7 +293,6 @@ const getSvgCoords = (event) => {
   if (!rect.width || !rect.height) {
     return null;
   }
-  // Convert screen coordinates into SVG viewBox coordinates.
   const x = ((event.clientX - rect.left) / rect.width) * chartViewBox.width;
   const y = ((event.clientY - rect.top) / rect.height) * chartViewBox.height;
   return { x, y };
@@ -276,7 +329,7 @@ const handleChartRightClick = (event) => {
   let closestIndex = -1;
   let closestDist = Infinity;
   draftPoints.forEach((point, index) => {
-    const mapped = scaleToChart(point.temp, point.fan);
+    const mapped = scaleToChart(point.temp, point.fan, chartBounds);
     const dist = Math.hypot(mapped.x - x, mapped.y - y);
     if (dist < closestDist) {
       closestDist = dist;

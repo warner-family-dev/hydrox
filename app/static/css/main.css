@@ -1105,7 +1105,7 @@ body {
 .profile-builder {
   display: grid;
   gap: 18px;
-  grid-template-columns: minmax(180px, 1fr) 2fr;
+  grid-template-columns: 1fr;
   margin-top: 12px;
 }
 
@@ -1159,6 +1159,12 @@ body {
   stroke-width: 1;
 }
 
+.profile-chart__labels text {
+  fill: var(--muted);
+  font-size: 12px;
+  font-family: var(--mono);
+}
+
 .profile-chart__hint {
   font-size: 11px;
   color: var(--muted);
@@ -1205,6 +1211,35 @@ body {
 .profile-rule__meta {
   font-size: 11px;
   color: var(--muted);
+}
+
+.profile-rule__chart {
+  margin-top: 10px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(12, 16, 22, 0.6);
+  padding: 8px;
+}
+
+.profile-rule__svg {
+  width: 100%;
+  height: auto;
+}
+
+.profile-rule__grid line {
+  stroke: rgba(120, 140, 170, 0.15);
+  stroke-width: 1;
+}
+
+.profile-rule__axes line {
+  stroke: rgba(120, 140, 170, 0.35);
+  stroke-width: 1.2;
+}
+
+.profile-rule__points circle {
+  fill: var(--accent);
+  stroke: #0b1016;
+  stroke-width: 1;
 }
 
 .profile-settings {
