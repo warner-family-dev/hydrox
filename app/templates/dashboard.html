@@ -6,9 +6,9 @@
     <p class="lead">Live readouts for thermals, pump output, and fan RPMs. Profiles and screens are staged until you deploy them.</p>
   </div>
   <div class="status-card">
-    <div class="status-card__label">System Pulse</div>
-    <div class="status-card__value">Liquidctl</div>
-    <div class="status-card__sub">{{ liquidctl_status }}</div>
+    <div class="status-card__label">Active Profile</div>
+    <div class="status-card__value">{{ active_profile_name }}</div>
+    <div class="status-card__sub">Profile control loop</div>
   </div>
   <div class="status-card status-card--compact" data-wifi-card>
     <div class="status-card__label">Wi-Fi Signal</div>
@@ -202,6 +202,7 @@
       <div class="modal__error" data-modal-error></div>
     </div>
     <div class="modal__footer">
+      <button class="button button--ghost" type="button" data-modal-back>Back to profile</button>
       <button class="button button--ghost" type="button" data-modal-cancel>Cancel</button>
       <button class="button" type="button" data-modal-save>Save</button>
     </div>

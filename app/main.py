@@ -22,7 +22,7 @@ from app.services.fans import (
     update_fan_settings,
 )
 from app.services.git_info import get_git_status
-from app.services.liquidctl import has_liquidctl_devices, set_fan_speed
+from app.services.liquidctl import set_fan_speed
 from app.services.logger import get_logger, now_local
 from app.services.metrics import (
     latest_metrics,
@@ -31,6 +31,7 @@ from app.services.metrics import (
 )
 from app.services.oled import ensure_web_fonts, list_font_choices, list_oled_channels
 from app.services.oled_manager import PlaylistScreen, list_token_definitions, start_oled_job, stop_oled_job
+from app.services.pump_curve import PUMP_MAX_RPM, PUMP_MIN_RPM, pump_pwm_for_rpm, percent_to_rpm
 from app.services.sensors import (
     format_temp,
     latest_sensor_readings,
@@ -41,34 +42,26 @@ from app.services.sensors import (
 )
 from app.services.settings import (
     get_active_profile_id,
+    get_default_profile_id,
     get_fan_pwm,
     get_fan_count,
     get_pump_channel,
     seed_settings_if_empty,
     set_active_profile_id,
+    set_default_profile_id,
     set_fan_pwm,
     set_fan_count,
     set_pump_channel,
 )
 from app.services.daemon import start_daemon
+from app.services.manual_override import clear_override, mark_override
+from app.services.profile_control import compute_profile_target_for_channel
 from app.services.system_status import get_status_payload, get_wifi_strength, set_image_start_time
 
 app = FastAPI(title="Hydrox Command Center")
 
 _cpu_fan_missing_logged = False
 _ADMIN_PASSWORD = "admin"
-_PUMP_MIN_RPM = 800
-_PUMP_MAX_RPM = 4800
-_PUMP_PWM_CURVE = [
-    (40, 1304),
-    (50, 1820),
-    (59, 2350),
-    (60, 2400),
-    (70, 3020),
-    (80, 3720),
-    (90, 4520),
-    (100, 4790),
-]
 _calibration_lock = threading.Lock()
 _calibration_state = {
     "running": False,
@@ -102,6 +95,8 @@ def startup() -> None:
     seed_metrics_if_empty()
     seed_fans_if_empty()
     seed_sensors_if_empty()
+    default_profile_id = get_default_profile_id()
+    set_active_profile_id(default_profile_id)
     ensure_web_fonts()
     branch, _ = get_git_status()
     logger = get_logger()
@@ -132,7 +127,12 @@ def dashboard(request: Request):
     pump_channel = get_pump_channel()
     if pump_channel is None and metrics:
         metrics["pump_percent"] = None
-    liquidctl_status = "Connected" if has_liquidctl_devices() else "Not connected"
+    active_profile_name = "None"
+    active_profile_id = get_active_profile_id()
+    if active_profile_id is not None:
+        profile = _load_profile(active_profile_id)
+        if profile:
+            active_profile_name = profile.get("name", "Unnamed")
     wifi_status = get_wifi_strength()
     sensors = list_sensors()
     readings = latest_sensor_readings()
@@ -155,7 +155,7 @@ def dashboard(request: Request):
             "fans": fans,
             "pump_channel": pump_channel,
             "sensors": sensor_cards,
-            "liquidctl_status": liquidctl_status,
+            "active_profile_name": active_profile_name,
             "wifi_status": wifi_status,
         },
     )
@@ -165,12 +165,18 @@ def dashboard(request: Request):
 def profiles(request: Request):
     rows = _load_profiles()
     active_profile_id = get_active_profile_id()
+    default_profile_id = get_default_profile_id()
+    fans = list_fans(active_only=True)
+    sensors = list_sensors()
     return templates.TemplateResponse(
         "profiles.html",
         {
             "request": request,
             "profiles": [dict(row) for row in rows],
             "active_profile_id": active_profile_id,
+            "default_profile_id": default_profile_id,
+            "fans": fans,
+            "sensors": sensors,
             "error": None,
         },
     )
@@ -210,6 +216,12 @@ def create_profile(
 @app.post("/profiles/apply")
 def apply_profile(profile_id: int = Form(...)):
     set_active_profile_id(profile_id)
+    return RedirectResponse("/profiles", status_code=303)
+
+
+@app.post("/profiles/default")
+def set_default_profile(profile_id: int = Form(...)):
+    set_default_profile_id(profile_id)
     return RedirectResponse("/profiles", status_code=303)
 
 
@@ -725,8 +737,8 @@ def set_manual_fan_speed(
             return JSONResponse({"ok": False, "error": "Percent must be 0-100."}, status_code=400)
         if value > 0:
             if is_pump:
-                desired_rpm = _percent_to_rpm(value, _PUMP_MAX_RPM, _PUMP_MIN_RPM)
-                percent = _pump_pwm_for_rpm(desired_rpm)
+                desired_rpm = percent_to_rpm(value, PUMP_MAX_RPM, PUMP_MIN_RPM)
+                percent = pump_pwm_for_rpm(desired_rpm)
                 if percent is None:
                     return JSONResponse({"ok": False, "error": "Pump curve unavailable."}, status_code=400)
             elif fan.get("max_rpm"):
@@ -750,7 +762,7 @@ def set_manual_fan_speed(
             if value > 0 and value < _PUMP_MIN_RPM:
                 value = _PUMP_MIN_RPM
             if value > 0:
-                percent = _pump_pwm_for_rpm(value)
+                percent = pump_pwm_for_rpm(value)
                 if percent is None:
                     return JSONResponse({"ok": False, "error": "Pump curve unavailable."}, status_code=400)
         elif value > 0 and value < min_rpm:
@@ -774,6 +786,7 @@ def set_manual_fan_speed(
             percent,
         )
         return JSONResponse({"ok": False, "error": "Failed to update fan speed."}, status_code=500)
+    mark_override(channel_index)
     logger.info(
         "manual fan override channel=%s mode=%s value=%s percent=%s max_rpm=%s",
         channel_index,
@@ -783,6 +796,24 @@ def set_manual_fan_speed(
         fan.get("max_rpm"),
     )
     return JSONResponse({"ok": True, "percent": percent})
+
+
+@app.post("/api/fans/back-to-profile")
+def back_to_profile(
+    channel_index: int = Form(...),
+    admin_password: str = Form(""),
+):
+    pump_channel = get_pump_channel()
+    if pump_channel is not None and channel_index == pump_channel:
+        if admin_password != _ADMIN_PASSWORD:
+            return JSONResponse({"ok": False, "error": "Admin password required."}, status_code=403)
+    clear_override(channel_index)
+    percent = compute_profile_target_for_channel(channel_index)
+    if percent is None:
+        return JSONResponse({"ok": False, "error": "No active profile."}, status_code=400)
+    if not _set_fan_speed(channel_index, int(percent)):
+        return JSONResponse({"ok": False, "error": "Failed to update fan speed."}, status_code=500)
+    return JSONResponse({"ok": True})
 
 
 @app.get("/api/calibration/status")
@@ -964,32 +995,6 @@ def _set_fan_speed(channel_index: int, percent: int) -> bool:
     return True
 
 
-def _percent_to_rpm(percent: int, max_rpm: int, min_rpm: int) -> int:
-    if percent <= 0:
-        return 0
-    rpm = int(round(max_rpm * percent / 100))
-    return max(min_rpm, rpm)
-
-
-def _pump_pwm_for_rpm(target_rpm: int) -> int | None:
-    if target_rpm <= 0:
-        return 0
-    points = sorted(_PUMP_PWM_CURVE, key=lambda item: item[1])
-    if not points:
-        return None
-    if target_rpm <= points[0][1]:
-        return points[0][0]
-    if target_rpm >= points[-1][1]:
-        return points[-1][0]
-    for (pwm_low, rpm_low), (pwm_high, rpm_high) in zip(points, points[1:]):
-        if rpm_low <= target_rpm <= rpm_high:
-            span = rpm_high - rpm_low
-            if span <= 0:
-                return pwm_low
-            ratio = (target_rpm - rpm_low) / span
-            pwm = pwm_low + ratio * (pwm_high - pwm_low)
-            return int(round(max(0, min(100, pwm))))
-    return None
 
 
 def _cpu_fan_series(limit: int, max_rpm: int) -> list[float]:
@@ -1011,23 +1016,51 @@ def _validate_profile_json(curve_json: str, schedule_json: str) -> str | None:
     except json.JSONDecodeError:
         return "Curve JSON must be valid JSON."
 
-    if not isinstance(curve, dict) or not curve:
-        return "Curve JSON must be an object with per-fan entries."
+    if not isinstance(curve, dict):
+        return "Curve JSON must be an object."
 
-    for channel, points in curve.items():
-        if not isinstance(points, list) or not points:
-            return f"Curve for {channel} must be a non-empty list."
-        for point in points:
-            if not isinstance(point, dict):
-                return f"Curve point for {channel} must be an object."
-            if "temp" not in point or "fan" not in point:
-                return f"Curve point for {channel} must include temp and fan."
-            if not isinstance(point["temp"], (int, float)):
-                return f"Curve temp for {channel} must be a number."
-            if not isinstance(point["fan"], (int, float)):
-                return f"Curve fan for {channel} must be a number."
-            if not 0 <= float(point["fan"]) <= 100:
-                return f"Curve fan for {channel} must be 0-100."
+    if "rules" in curve:
+        rules = curve.get("rules")
+        if not isinstance(rules, list) or not rules:
+            return "Curve JSON must include at least one rule."
+        for idx, rule in enumerate(rules, start=1):
+            if not isinstance(rule, dict):
+                return f"Rule {idx} must be an object."
+            if "sensor_id" not in rule or "fan_channels" not in rule or "points" not in rule:
+                return f"Rule {idx} must include sensor_id, fan_channels, and points."
+            if not isinstance(rule["fan_channels"], list) or not rule["fan_channels"]:
+                return f"Rule {idx} fan_channels must be a non-empty list."
+            points = rule["points"]
+            if not isinstance(points, list) or not points:
+                return f"Rule {idx} points must be a non-empty list."
+            for point in points:
+                if not isinstance(point, dict):
+                    return f"Rule {idx} point must be an object."
+                if "temp" not in point or "fan" not in point:
+                    return f"Rule {idx} point must include temp and fan."
+                if not isinstance(point["temp"], (int, float)):
+                    return f"Rule {idx} temp must be a number."
+                if not isinstance(point["fan"], (int, float)):
+                    return f"Rule {idx} fan must be a number."
+                if not 0 <= float(point["fan"]) <= 100:
+                    return f"Rule {idx} fan must be 0-100."
+    else:
+        if not curve:
+            return "Curve JSON must include per-fan entries or rules."
+        for channel, points in curve.items():
+            if not isinstance(points, list) or not points:
+                return f"Curve for {channel} must be a non-empty list."
+            for point in points:
+                if not isinstance(point, dict):
+                    return f"Curve point for {channel} must be an object."
+                if "temp" not in point or "fan" not in point:
+                    return f"Curve point for {channel} must include temp and fan."
+                if not isinstance(point["temp"], (int, float)):
+                    return f"Curve temp for {channel} must be a number."
+                if not isinstance(point["fan"], (int, float)):
+                    return f"Curve fan for {channel} must be a number."
+                if not 0 <= float(point["fan"]) <= 100:
+                    return f"Curve fan for {channel} must be 0-100."
 
     if schedule_json:
         try:

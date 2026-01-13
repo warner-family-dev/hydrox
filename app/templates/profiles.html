@@ -3,7 +3,7 @@
 <section class="hero">
   <div>
     <h1>Profile Creator</h1>
-    <p class="lead">Draft per-channel fan and pump curves, then assign cron rules and weekday windows. Profiles never auto-apply.</p>
+    <p class="lead">Map sensors to fan channels and shape how PWM scales with temperature. Profiles apply continuously when active.</p>
   </div>
 </section>
 
@@ -16,15 +16,99 @@
     {% if error %}
     <div class="alert">{{ error }}</div>
     {% endif %}
-    <form class="form" method="post" action="/profiles">
+    <form class="form" method="post" action="/profiles" id="profile-form">
       <label class="form__label">Profile Name</label>
       <input class="form__input" type="text" name="name" placeholder="Cellar Quiet Curve" required />
 
-      <label class="form__label">Curve JSON (per fan channel)</label>
-      <textarea class="form__textarea" name="curve_json" rows="6" placeholder='{"fan_1": [{"temp": 18, "fan": 30}, {"temp": 22, "fan": 55}], "fan_2": [{"temp": 18, "fan": 28}]}' required></textarea>
+      <div class="profile-builder">
+        <div class="profile-builder__controls">
+          <label class="form__label">Sensor</label>
+          <select class="form__input" data-profile-sensor>
+            <option value="cpu">CPU Temp</option>
+            {% for sensor in sensors %}
+            <option value="{{ sensor.id }}">{{ sensor.name }}</option>
+            {% endfor %}
+          </select>
 
-      <label class="form__label">Schedule JSON (cron + window, optional)</label>
-      <textarea class="form__textarea" name="schedule_json" rows="5" placeholder='{"cron": "0 18 * * *", "window": {"days": ["Mon", "Wed"], "start": "18:00", "end": "06:00"}}'></textarea>
+          <label class="form__label">Fan Channels</label>
+          <div class="profile-builder__fans">
+            {% for fan in fans %}
+            <label class="profile-builder__fan">
+              <input type="checkbox" value="{{ fan.channel_index }}" />
+              <span>Channel {{ fan.channel_index }} · {{ fan.name }}</span>
+            </label>
+            {% endfor %}
+          </div>
+
+          <button class="button button--ghost" type="button" data-profile-add>Add Curve</button>
+        </div>
+
+        <div class="profile-builder__chart">
+          <div class="profile-chart" data-profile-chart>
+            <svg viewBox="0 0 520 320" class="profile-chart__svg" aria-hidden="true">
+              <g class="profile-chart__grid" data-profile-grid></g>
+              <g class="profile-chart__axes">
+                <line x1="40" y1="20" x2="40" y2="280" />
+                <line x1="40" y1="280" x2="500" y2="280" />
+              </g>
+              <polyline class="profile-chart__line" data-profile-line fill="none" stroke="var(--accent)" stroke-width="2" />
+              <g class="profile-chart__points" data-profile-points></g>
+            </svg>
+            <div class="profile-chart__hint">Click to add points · Right-click to remove</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="profile-rules">
+        <div class="profile-rules__title">Mapped Curves</div>
+        <div class="profile-rules__list" data-profile-rules></div>
+      </div>
+
+      <div class="profile-settings">
+        <div class="profile-settings__title">Control Smoothing (seconds)</div>
+        <div class="profile-settings__grid">
+          <label class="form__label">Sensor smoothing</label>
+          <input class="form__input" type="number" min="0" name="sensor_smoothing_sec" value="0" data-profile-setting />
+          <label class="form__label">Fan smoothing</label>
+          <input class="form__input" type="number" min="0" name="fan_smoothing_sec" value="0" data-profile-setting />
+          <label class="form__label">Pump smoothing</label>
+          <input class="form__input" type="number" min="0" name="pump_smoothing_sec" value="0" data-profile-setting />
+        </div>
+        <div class="profile-settings__title">Rate Limits (RPM per update)</div>
+        <div class="profile-settings__grid">
+          <label class="form__label">Fan rate limit</label>
+          <input class="form__input" type="number" min="0" name="fan_rate_limit_rpm" value="0" data-profile-setting />
+          <label class="form__label">Pump rate limit</label>
+          <input class="form__input" type="number" min="0" name="pump_rate_limit_rpm" value="0" data-profile-setting />
+        </div>
+        <div class="profile-settings__title">Safety Limits (non-CPU sensors)</div>
+        <div class="profile-settings__grid">
+          <label class="form__label">Sensor min °C</label>
+          <input class="form__input" type="number" name="sensor_min_c" placeholder="optional" data-profile-setting />
+          <label class="form__label">Sensor max °C</label>
+          <input class="form__input" type="number" name="sensor_max_c" placeholder="optional" data-profile-setting />
+        </div>
+        <div class="profile-settings__title">Fallback Sensor Mapping (optional)</div>
+        <div class="profile-settings__fallbacks">
+          {% for sensor in sensors %}
+          <label class="profile-settings__fallback">
+            <span>{{ sensor.name }}</span>
+            <select class="form__input" data-fallback-source="{{ sensor.id }}">
+              <option value="">None</option>
+              <option value="cpu">CPU Temp</option>
+              {% for backup in sensors %}
+              {% if backup.id != sensor.id %}
+              <option value="{{ backup.id }}">{{ backup.name }}</option>
+              {% endif %}
+              {% endfor %}
+            </select>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <textarea class="form__textarea profile-json" name="curve_json" rows="8" data-profile-json readonly required></textarea>
+      <input type="hidden" name="schedule_json" value="" />
 
       <button class="button" type="submit">Save Profile</button>
     </form>
@@ -53,6 +137,14 @@
             <input type="hidden" name="profile_id" value="{{ profile.id }}" />
             <button class="button button--ghost" type="submit">Apply Profile</button>
           </form>
+          <form method="post" action="/profiles/default">
+            <input type="hidden" name="profile_id" value="{{ profile.id }}" />
+            <label class="profile-default">
+              <input type="radio" name="default_profile" value="{{ profile.id }}" {% if default_profile_id == profile.id %}checked{% endif %} />
+              <span>Default on boot</span>
+            </label>
+            <button class="button button--ghost" type="submit">Set Default</button>
+          </form>
         </div>
         {% endfor %}
       {% else %}
@@ -61,4 +153,11 @@
     </div>
   </div>
 </section>
+<script>
+  window.PROFILE_DATA = {
+    fans: {{ fans | tojson }},
+    sensors: {{ sensors | tojson }},
+  };
+</script>
+<script src="/static/js/profiles.js"></script>
 {% endblock %}

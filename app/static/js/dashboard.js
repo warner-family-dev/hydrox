@@ -28,6 +28,7 @@ const fanModalPercent = fanModal?.querySelector('[data-input-percent]');
 const fanModalRpm = fanModal?.querySelector('[data-input-rpm]');
 const fanModalPassword = fanModal?.querySelector('[data-admin-password]');
 const fanModalPumpAuth = fanModal?.querySelector('[data-pump-auth]');
+const fanModalBack = fanModal?.querySelector('[data-modal-back]');
 const fanModalSave = fanModal?.querySelector('[data-modal-save]');
 const fanModalCancel = fanModal?.querySelector('[data-modal-cancel]');
 const modeButtons = fanModal?.querySelectorAll('[data-mode]') || [];
@@ -524,6 +525,43 @@ fanModalPercent?.addEventListener('input', () => {
 fanModalRpm?.addEventListener('input', () => {
   if (modalState.mode === 'rpm') {
     syncComputedValues();
+  }
+});
+
+fanModalBack?.addEventListener('click', async () => {
+  hideModalError();
+  if (!modalState.channel) {
+    showModalError('Fan channel missing.');
+    return;
+  }
+  if (modalState.isPump) {
+    const password = fanModalPassword?.value || '';
+    if (!password) {
+      showModalError('Admin password required.');
+      return;
+    }
+  }
+  const params = new URLSearchParams();
+  params.set('channel_index', modalState.channel);
+  if (modalState.isPump && fanModalPassword) {
+    params.set('admin_password', fanModalPassword.value || '');
+  }
+  try {
+    const response = await fetch('/api/fans/back-to-profile', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: params.toString(),
+    });
+    const payload = await response.json();
+    if (!response.ok || !payload.ok) {
+      showModalError(payload.error || 'Failed to return to profile.');
+      return;
+    }
+    closeFanModal();
+  } catch (error) {
+    showModalError('Failed to return to profile.');
   }
 });
 

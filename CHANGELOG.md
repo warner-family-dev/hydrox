@@ -4,6 +4,11 @@
 
 - Map pump RPM targets to PWM using a measured curve for accurate percent control.
 - Show the pump max RPM (4800) as a disabled field in Settings.
+- Add profile control loop with smoothing, rate limits, safety bounds, and fallback sensor mapping.
+- Rebuild Profile Creator with sensor→fan mapping, interactive curve editor, and JSON export.
+- Add default profile selection and apply it on restart.
+- Add per-fan manual override suppression and a “Back to profile” button.
+- Show the active profile in the dashboard hero card.
 
 ## v0.0.6 - January 11, 2026
 

@@ -4,6 +4,7 @@ FAN_COUNT_KEY = "fan_count"
 ACTIVE_PROFILE_KEY = "active_profile_id"
 DEFAULT_FAN_COUNT = 7
 PUMP_CHANNEL_KEY = "pump_channel"
+DEFAULT_PROFILE_KEY = "default_profile_id"
 
 
 def seed_settings_if_empty() -> None:
@@ -72,6 +73,23 @@ def set_active_profile_id(profile_id: int | None) -> None:
         set_setting(ACTIVE_PROFILE_KEY, "")
         return
     set_setting(ACTIVE_PROFILE_KEY, str(profile_id))
+
+
+def get_default_profile_id() -> int | None:
+    value = get_setting(DEFAULT_PROFILE_KEY)
+    if value in (None, ""):
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def set_default_profile_id(profile_id: int | None) -> None:
+    if profile_id is None:
+        set_setting(DEFAULT_PROFILE_KEY, "")
+        return
+    set_setting(DEFAULT_PROFILE_KEY, str(profile_id))
 
 
 def get_pump_channel() -> int | None:

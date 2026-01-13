@@ -18,6 +18,7 @@ from app.services.sensors import (
     refresh_liquid_sensors,
     sync_ds18b20_sensors,
 )
+from app.services.profile_control import run_profile_loop
 from app.services.settings import get_fan_pwm, get_pump_channel
 from app.services.system_status import _read_wifi_strength, set_wifi_cache
 
@@ -34,6 +35,7 @@ def start_daemon() -> None:
     threading.Thread(target=_fan_sampler, daemon=True).start()
     threading.Thread(target=_wifi_sampler, daemon=True).start()
     threading.Thread(target=_sensor_sampler, daemon=True).start()
+    threading.Thread(target=run_profile_loop, daemon=True).start()
 
 
 def _cpu_sampler() -> None:
