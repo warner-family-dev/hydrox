@@ -1279,6 +1279,87 @@ body {
   background: rgba(10, 16, 24, 0.6);
 }
 
+.profile-modal {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 240;
+}
+
+.profile-modal--open {
+  display: flex;
+}
+
+.profile-modal__overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(4, 6, 10, 0.8);
+}
+
+.profile-modal__panel {
+  position: relative;
+  z-index: 1;
+  width: min(75vw, 1200px);
+  height: min(75vh, 760px);
+  max-width: 92vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 18px;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  box-shadow: 0 30px 80px rgba(3, 8, 16, 0.6);
+}
+
+.profile-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.profile-modal__title {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.profile-modal__sub {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+.profile-modal__close {
+  border: 0;
+  background: rgba(20, 27, 38, 0.7);
+  color: var(--text);
+  font-size: 20px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.profile-chart--modal {
+  flex: 1;
+  padding: 14px;
+  display: flex;
+}
+
+.profile-chart--modal .profile-chart__svg {
+  height: 100%;
+}
+
+.profile-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
 .profile-default {
   display: flex;
   align-items: center;

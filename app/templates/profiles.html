@@ -42,21 +42,6 @@
 
           <button class="button button--ghost" type="button" data-profile-add>Add Curve</button>
         </div>
-
-        <div class="profile-builder__chart">
-          <div class="profile-chart" data-profile-chart>
-            <svg viewBox="0 0 520 320" class="profile-chart__svg" aria-hidden="true">
-              <g class="profile-chart__grid" data-profile-grid></g>
-              <g class="profile-chart__axes">
-                <line x1="40" y1="20" x2="40" y2="280" />
-                <line x1="40" y1="280" x2="500" y2="280" />
-              </g>
-              <polyline class="profile-chart__line" data-profile-line fill="none" stroke="var(--accent)" stroke-width="2" />
-              <g class="profile-chart__points" data-profile-points></g>
-            </svg>
-            <div class="profile-chart__hint">Click to add points · Right-click to remove</div>
-          </div>
-        </div>
       </div>
 
       <div class="profile-rules">
@@ -176,6 +161,33 @@
     </div>
   </div>
 </section>
+<div class="profile-modal" data-profile-modal>
+  <div class="profile-modal__overlay" data-profile-close></div>
+  <div class="profile-modal__panel">
+    <div class="profile-modal__header">
+      <div>
+        <div class="profile-modal__title">Curve Editor</div>
+        <div class="profile-modal__sub">Click to add points · Right-click to remove</div>
+      </div>
+      <button class="profile-modal__close" type="button" data-profile-close>×</button>
+    </div>
+    <div class="profile-chart profile-chart--modal" data-profile-chart>
+      <svg viewBox="0 0 900 520" class="profile-chart__svg" aria-hidden="true">
+        <g class="profile-chart__grid" data-profile-grid></g>
+        <g class="profile-chart__axes">
+          <line x1="60" y1="30" x2="60" y2="470" />
+          <line x1="60" y1="470" x2="860" y2="470" />
+        </g>
+        <polyline class="profile-chart__line" data-profile-line fill="none" stroke="var(--accent)" stroke-width="2" />
+        <g class="profile-chart__points" data-profile-points></g>
+      </svg>
+    </div>
+    <div class="profile-modal__actions">
+      <button class="button button--ghost" type="button" data-profile-cancel>Cancel</button>
+      <button class="button" type="button" data-profile-save>Save Curve</button>
+    </div>
+  </div>
+</div>
 <script>
   window.PROFILE_DATA = {
     fans: {{ fans | tojson }},

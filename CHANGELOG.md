@@ -11,6 +11,7 @@
 - Add per-fan manual override suppression and a “Back to profile” button.
 - Show the active profile in the dashboard hero card.
 - Group optional profile settings into a collapsible section with clearer field grouping.
+- Move the profile curve editor into a larger modal window for easier editing.
 
 ## v0.0.6 - January 11, 2026
 

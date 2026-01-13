@@ -7,20 +7,33 @@ const rulesContainer = document.querySelector('[data-profile-rules]');
 const jsonField = document.querySelector('[data-profile-json]');
 const settingsInputs = Array.from(document.querySelectorAll('[data-profile-setting]'));
 const fallbackSelects = Array.from(document.querySelectorAll('[data-fallback-source]'));
-const chart = document.querySelector('[data-profile-chart]');
-const chartLine = document.querySelector('[data-profile-line]');
-const chartPoints = document.querySelector('[data-profile-points]');
-const chartGrid = document.querySelector('[data-profile-grid]');
+const modal = document.querySelector('[data-profile-modal]');
+const modalCloseButtons = Array.from(document.querySelectorAll('[data-profile-close]'));
+const modalCancel = document.querySelector('[data-profile-cancel]');
+const modalSave = document.querySelector('[data-profile-save]');
+const chart = modal ? modal.querySelector('[data-profile-chart]') : null;
+const chartSvg = modal ? modal.querySelector('.profile-chart__svg') : null;
+const chartLine = modal ? modal.querySelector('[data-profile-line]') : null;
+const chartPoints = modal ? modal.querySelector('[data-profile-points]') : null;
+const chartGrid = modal ? modal.querySelector('[data-profile-grid]') : null;
 
 const chartBounds = {
-  left: 40,
-  right: 500,
-  top: 20,
-  bottom: 280,
+  left: 60,
+  right: 860,
+  top: 30,
+  bottom: 470,
+};
+
+const chartViewBox = {
+  width: 900,
+  height: 520,
 };
 
 const rules = [];
 let activeRuleIndex = null;
+let editRuleIndex = null;
+let draftPoints = [];
+let draftMeta = null;
 
 const sensorLabel = (sensorId) => {
   if (sensorId === 'cpu') {
@@ -59,6 +72,8 @@ const scaleFromChart = (x, y) => {
   };
 };
 
+const sortPoints = (points) => [...points].sort((a, b) => a.temp - b.temp);
+
 const renderRules = () => {
   if (!rulesContainer) {
     return;
@@ -86,13 +101,12 @@ const renderChart = () => {
   if (!chartLine || !chartPoints) {
     return;
   }
-  const rule = rules[activeRuleIndex] || null;
-  if (!rule) {
+  if (!draftPoints.length) {
     chartLine.setAttribute('points', '');
     chartPoints.innerHTML = '';
     return;
   }
-  const sorted = [...rule.points].sort((a, b) => a.temp - b.temp);
+  const sorted = sortPoints(draftPoints);
   const polylinePoints = sorted.map((point) => {
     const coords = scaleToChart(point.temp, point.fan);
     return `${coords.x.toFixed(1)},${coords.y.toFixed(1)}`;
@@ -101,7 +115,7 @@ const renderChart = () => {
   chartPoints.innerHTML = sorted
     .map((point) => {
       const coords = scaleToChart(point.temp, point.fan);
-      return `<circle cx="${coords.x}" cy="${coords.y}" r="5" data-temp="${point.temp}" data-fan="${point.fan}" />`;
+      return `<circle cx="${coords.x}" cy="${coords.y}" r="6" data-temp="${point.temp}" data-fan="${point.fan}" />`;
     })
     .join('');
 };
@@ -141,6 +155,37 @@ const updateJson = () => {
 const setActiveRule = (index) => {
   activeRuleIndex = index;
   renderRules();
+};
+
+const getSelectedFans = () => fanCheckboxes.filter((input) => input.checked).map((input) => Number(input.value));
+
+const defaultPoints = () => [
+  { temp: 20, fan: 30 },
+  { temp: 60, fan: 70 },
+];
+
+const openModal = (meta, points, index = null) => {
+  if (!modal) {
+    return;
+  }
+  editRuleIndex = index;
+  draftMeta = meta;
+  draftPoints = points.map((point) => ({ temp: point.temp, fan: point.fan }));
+  setActiveRule(index);
+  renderGrid();
+  renderChart();
+  modal.classList.add('profile-modal--open');
+};
+
+const closeModal = () => {
+  if (!modal) {
+    return;
+  }
+  modal.classList.remove('profile-modal--open');
+  editRuleIndex = null;
+  draftMeta = null;
+  draftPoints = [];
+  setActiveRule(null);
   renderChart();
 };
 
@@ -148,71 +193,99 @@ const addRule = () => {
   if (!sensorSelect) {
     return;
   }
-  const selectedFans = fanCheckboxes.filter((input) => input.checked).map((input) => Number(input.value));
+  const selectedFans = getSelectedFans();
   if (!selectedFans.length) {
+    window.alert('Select at least one fan channel before adding a curve.');
     return;
   }
-  const rule = {
+  const meta = {
     sensor_id: sensorSelect.value,
     fan_channels: selectedFans,
-    points: [
-      { temp: 20, fan: 30 },
-      { temp: 60, fan: 70 },
-    ],
   };
-  rules.push(rule);
-  fanCheckboxes.forEach((input) => {
-    input.checked = false;
-  });
-  setActiveRule(rules.length - 1);
+  openModal(meta, defaultPoints());
+};
+
+const saveRule = () => {
+  if (!draftMeta) {
+    return;
+  }
+  const points = sortPoints(draftPoints).map((point) => ({
+    temp: Number(point.temp.toFixed(1)),
+    fan: Number(point.fan.toFixed(1)),
+  }));
+  const rule = {
+    sensor_id: draftMeta.sensor_id,
+    fan_channels: draftMeta.fan_channels,
+    points,
+  };
+  if (editRuleIndex === null || editRuleIndex === undefined) {
+    rules.push(rule);
+    fanCheckboxes.forEach((input) => {
+      input.checked = false;
+    });
+  } else {
+    rules[editRuleIndex] = rule;
+  }
   updateJson();
+  renderRules();
+  closeModal();
+};
+
+const getSvgCoords = (event) => {
+  if (!chartSvg) {
+    return null;
+  }
+  const rect = chartSvg.getBoundingClientRect();
+  if (!rect.width || !rect.height) {
+    return null;
+  }
+  // Convert screen coordinates into SVG viewBox coordinates.
+  const x = ((event.clientX - rect.left) / rect.width) * chartViewBox.width;
+  const y = ((event.clientY - rect.top) / rect.height) * chartViewBox.height;
+  return { x, y };
 };
 
 const handleChartClick = (event) => {
-  if (activeRuleIndex === null) {
+  if (!draftMeta) {
     return;
   }
-  const rect = chart.getBoundingClientRect();
-  const x = event.clientX - rect.left;
-  const y = event.clientY - rect.top;
-  if (
-    x < chartBounds.left ||
-    x > chartBounds.right ||
-    y < chartBounds.top ||
-    y > chartBounds.bottom
-  ) {
+  const coords = getSvgCoords(event);
+  if (!coords) {
     return;
   }
-  const coords = scaleFromChart(x, y);
-  rules[activeRuleIndex].points.push({ temp: coords.temp, fan: coords.fan });
-  rules[activeRuleIndex].points.sort((a, b) => a.temp - b.temp);
+  const { x, y } = coords;
+  if (x < chartBounds.left || x > chartBounds.right || y < chartBounds.top || y > chartBounds.bottom) {
+    return;
+  }
+  const scaled = scaleFromChart(x, y);
+  draftPoints.push({ temp: scaled.temp, fan: scaled.fan });
+  draftPoints = sortPoints(draftPoints);
   renderChart();
-  updateJson();
 };
 
 const handleChartRightClick = (event) => {
   event.preventDefault();
-  if (activeRuleIndex === null) {
+  if (!draftMeta || !draftPoints.length) {
     return;
   }
-  const rect = chart.getBoundingClientRect();
-  const x = event.clientX - rect.left;
-  const y = event.clientY - rect.top;
-  const rule = rules[activeRuleIndex];
+  const coords = getSvgCoords(event);
+  if (!coords) {
+    return;
+  }
+  const { x, y } = coords;
   let closestIndex = -1;
   let closestDist = Infinity;
-  rule.points.forEach((point, index) => {
-    const coords = scaleToChart(point.temp, point.fan);
-    const dist = Math.hypot(coords.x - x, coords.y - y);
+  draftPoints.forEach((point, index) => {
+    const mapped = scaleToChart(point.temp, point.fan);
+    const dist = Math.hypot(mapped.x - x, mapped.y - y);
     if (dist < closestDist) {
       closestDist = dist;
       closestIndex = index;
     }
   });
-  if (closestIndex !== -1 && closestDist <= 12) {
-    rule.points.splice(closestIndex, 1);
+  if (closestIndex !== -1 && closestDist <= 14) {
+    draftPoints.splice(closestIndex, 1);
     renderChart();
-    updateJson();
   }
 };
 
@@ -227,15 +300,33 @@ if (rulesContainer) {
       return;
     }
     const index = Number(button.getAttribute('data-rule-index'));
-    if (!Number.isNaN(index)) {
-      setActiveRule(index);
+    if (Number.isNaN(index) || !rules[index]) {
+      return;
     }
+    const rule = rules[index];
+    openModal(
+      { sensor_id: rule.sensor_id, fan_channels: [...rule.fan_channels] },
+      rule.points,
+      index,
+    );
   });
 }
 
 if (chart) {
   chart.addEventListener('click', handleChartClick);
   chart.addEventListener('contextmenu', handleChartRightClick);
+}
+
+modalCloseButtons.forEach((button) => {
+  button.addEventListener('click', closeModal);
+});
+
+if (modalCancel) {
+  modalCancel.addEventListener('click', closeModal);
+}
+
+if (modalSave) {
+  modalSave.addEventListener('click', saveRule);
 }
 
 settingsInputs.forEach((input) => {
@@ -246,7 +337,5 @@ fallbackSelects.forEach((select) => {
   select.addEventListener('change', updateJson);
 });
 
-renderGrid();
 renderRules();
-renderChart();
 updateJson();
