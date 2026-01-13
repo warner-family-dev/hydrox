@@ -1209,8 +1209,39 @@ body {
 
 .profile-settings {
   margin-top: 18px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: rgba(20, 27, 38, 0.5);
+  padding: 12px;
+}
+
+.profile-settings__summary {
+  cursor: pointer;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--muted);
+  list-style: none;
+}
+
+.profile-settings__summary::-webkit-details-marker {
+  display: none;
+}
+
+.profile-settings__summary::after {
+  content: "▾";
+  margin-left: 8px;
+  color: var(--muted);
+}
+
+.profile-settings[open] .profile-settings__summary::after {
+  content: "▴";
+}
+
+.profile-settings__section {
+  margin-top: 14px;
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 
 .profile-settings__title {
@@ -1224,6 +1255,11 @@ body {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 10px;
+}
+
+.profile-settings__field {
+  display: grid;
+  gap: 6px;
 }
 
 .profile-settings__fallbacks {

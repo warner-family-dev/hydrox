@@ -64,48 +64,71 @@
         <div class="profile-rules__list" data-profile-rules></div>
       </div>
 
-      <div class="profile-settings">
-        <div class="profile-settings__title">Control Smoothing (seconds)</div>
-        <div class="profile-settings__grid">
-          <label class="form__label">Sensor smoothing</label>
-          <input class="form__input" type="number" min="0" name="sensor_smoothing_sec" value="0" data-profile-setting />
-          <label class="form__label">Fan smoothing</label>
-          <input class="form__input" type="number" min="0" name="fan_smoothing_sec" value="0" data-profile-setting />
-          <label class="form__label">Pump smoothing</label>
-          <input class="form__input" type="number" min="0" name="pump_smoothing_sec" value="0" data-profile-setting />
+      <details class="profile-settings" open>
+        <summary class="profile-settings__summary">Optional Settings</summary>
+        <div class="profile-settings__section">
+          <div class="profile-settings__title">Control Smoothing (seconds)</div>
+          <div class="profile-settings__grid">
+            <label class="profile-settings__field">
+              <span class="form__label">Sensor smoothing</span>
+              <input class="form__input" type="number" min="0" name="sensor_smoothing_sec" value="0" data-profile-setting />
+            </label>
+            <label class="profile-settings__field">
+              <span class="form__label">Fan smoothing</span>
+              <input class="form__input" type="number" min="0" name="fan_smoothing_sec" value="0" data-profile-setting />
+            </label>
+            <label class="profile-settings__field">
+              <span class="form__label">Pump smoothing</span>
+              <input class="form__input" type="number" min="0" name="pump_smoothing_sec" value="0" data-profile-setting />
+            </label>
+          </div>
         </div>
-        <div class="profile-settings__title">Rate Limits (RPM per update)</div>
-        <div class="profile-settings__grid">
-          <label class="form__label">Fan rate limit</label>
-          <input class="form__input" type="number" min="0" name="fan_rate_limit_rpm" value="0" data-profile-setting />
-          <label class="form__label">Pump rate limit</label>
-          <input class="form__input" type="number" min="0" name="pump_rate_limit_rpm" value="0" data-profile-setting />
+        <div class="profile-settings__section">
+          <div class="profile-settings__title">Rate Limits (RPM per update)</div>
+          <div class="profile-settings__grid">
+            <label class="profile-settings__field">
+              <span class="form__label">Fan rate limit</span>
+              <input class="form__input" type="number" min="0" name="fan_rate_limit_rpm" value="0" data-profile-setting />
+            </label>
+            <label class="profile-settings__field">
+              <span class="form__label">Pump rate limit</span>
+              <input class="form__input" type="number" min="0" name="pump_rate_limit_rpm" value="0" data-profile-setting />
+            </label>
+          </div>
         </div>
-        <div class="profile-settings__title">Safety Limits (non-CPU sensors)</div>
-        <div class="profile-settings__grid">
-          <label class="form__label">Sensor min °C</label>
-          <input class="form__input" type="number" name="sensor_min_c" placeholder="optional" data-profile-setting />
-          <label class="form__label">Sensor max °C</label>
-          <input class="form__input" type="number" name="sensor_max_c" placeholder="optional" data-profile-setting />
+        <div class="profile-settings__section">
+          <div class="profile-settings__title">Safety Limits (non-CPU sensors)</div>
+          <div class="profile-settings__grid">
+            <label class="profile-settings__field">
+              <span class="form__label">Sensor min °C</span>
+              <input class="form__input" type="number" name="sensor_min_c" placeholder="optional" data-profile-setting />
+            </label>
+            <label class="profile-settings__field">
+              <span class="form__label">Sensor max °C</span>
+              <input class="form__input" type="number" name="sensor_max_c" placeholder="optional" data-profile-setting />
+            </label>
+          </div>
         </div>
-        <div class="profile-settings__title">Fallback Sensor Mapping (optional)</div>
-        <div class="profile-settings__fallbacks">
-          {% for sensor in sensors %}
-          <label class="profile-settings__fallback">
-            <span>{{ sensor.name }}</span>
-            <select class="form__input" data-fallback-source="{{ sensor.id }}">
-              <option value="">None</option>
-              <option value="cpu">CPU Temp</option>
-              {% for backup in sensors %}
-              {% if backup.id != sensor.id %}
-              <option value="{{ backup.id }}">{{ backup.name }}</option>
-              {% endif %}
-              {% endfor %}
-            </select>
-          </label>
-          {% endfor %}
+        <div class="profile-settings__section">
+          <div class="profile-settings__title">Fallback Sensor Mapping (optional)</div>
+          <div class="profile-settings__fallbacks">
+            {% for sensor in sensors %}
+            <label class="profile-settings__fallback">
+              <span>{{ sensor.name }}</span>
+              <select class="form__input" data-fallback-source="{{ sensor.id }}">
+                <option value="">None</option>
+                <option value="cpu">CPU Temp</option>
+                {% for backup in sensors %}
+                {% if backup.id != sensor.id %}
+                <option value="{{ backup.id }}">{{ backup.name }}</option>
+                {% endif %}
+                {% endfor %}
+              </select>
+            </label>
+            {% endfor %}
+          </div>
         </div>
-      </div>
+      </details>
 
       <textarea class="form__textarea profile-json" name="curve_json" rows="8" data-profile-json readonly required></textarea>
       <input type="hidden" name="schedule_json" value="" />

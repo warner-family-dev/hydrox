@@ -10,6 +10,7 @@
 - Add default profile selection and apply it on restart.
 - Add per-fan manual override suppression and a “Back to profile” button.
 - Show the active profile in the dashboard hero card.
+- Group optional profile settings into a collapsible section with clearer field grouping.
 
 ## v0.0.6 - January 11, 2026
 
