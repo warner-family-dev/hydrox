@@ -16,9 +16,10 @@
     {% if error %}
     <div class="alert">{{ error }}</div>
     {% endif %}
-    <form class="form" method="post" action="/profiles" id="profile-form">
+    <form class="form" method="post" action="/profiles" id="profile-form" data-profile-form>
+      <input type="hidden" name="profile_id" value="" data-profile-id />
       <label class="form__label">Profile Name</label>
-      <input class="form__input" type="text" name="name" placeholder="Cellar Quiet Curve" required />
+      <input class="form__input" type="text" name="name" placeholder="Cellar Quiet Curve" required data-profile-name />
 
       <div class="profile-builder">
         <div class="profile-builder__controls">
@@ -118,7 +119,7 @@
       <textarea class="form__textarea profile-json" name="curve_json" rows="8" data-profile-json readonly required></textarea>
       <input type="hidden" name="schedule_json" value="" />
 
-      <button class="button" type="submit">Save Profile</button>
+      <button class="button" type="submit" data-profile-submit>Save Profile</button>
     </form>
   </div>
   <div class="panel">
@@ -126,6 +127,7 @@
       <h2>Saved Profiles</h2>
       <span class="panel__tag">SQLite</span>
     </div>
+    <div class="panel__note">Auto-cycle interval: {{ profile_loop_seconds }}s (active profile sensor smoothing)</div>
     <div class="list">
       {% if profiles %}
         {% for profile in profiles %}
@@ -145,6 +147,16 @@
             <input type="hidden" name="profile_id" value="{{ profile.id }}" />
             <button class="button button--ghost" type="submit">Apply Profile</button>
           </form>
+          <button
+            class="button button--ghost"
+            type="button"
+            data-profile-edit
+            data-profile-id="{{ profile.id }}"
+            data-profile-name="{{ profile.name }}"
+            data-profile-curve='{{ profile.curve_json | tojson }}'
+          >
+            Edit
+          </button>
           <form method="post" action="/profiles/default">
             <input type="hidden" name="profile_id" value="{{ profile.id }}" />
             <label class="profile-default">

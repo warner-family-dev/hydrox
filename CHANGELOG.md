@@ -20,6 +20,7 @@
 - Shift the profile curve Y-axis title left to avoid tick overlap.
 - Add vcgencmd throttling status checks to Admin with warning states.
 - Align saved screen editor labels and inputs into aligned rows.
+- Allow in-place profile editing from saved profile cards and show the profile loop interval.
 
 ## v0.0.6 - January 11, 2026
 

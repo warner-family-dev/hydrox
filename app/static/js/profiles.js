@@ -7,6 +7,11 @@ const rulesContainer = document.querySelector('[data-profile-rules]');
 const jsonField = document.querySelector('[data-profile-json]');
 const settingsInputs = Array.from(document.querySelectorAll('[data-profile-setting]'));
 const fallbackSelects = Array.from(document.querySelectorAll('[data-fallback-source]'));
+const profileForm = document.querySelector('[data-profile-form]');
+const profileIdField = document.querySelector('[data-profile-id]');
+const profileNameField = document.querySelector('[data-profile-name]');
+const profileSubmit = document.querySelector('[data-profile-submit]');
+const editButtons = Array.from(document.querySelectorAll('[data-profile-edit]'));
 const modal = document.querySelector('[data-profile-modal]');
 const modalCloseButtons = Array.from(document.querySelectorAll('[data-profile-close]'));
 const modalCancel = document.querySelector('[data-profile-cancel]');
@@ -218,6 +223,18 @@ const defaultPoints = () => [
   { temp: 60, fan: 70 },
 ];
 
+const resetEditMode = () => {
+  if (profileForm) {
+    profileForm.setAttribute('action', '/profiles');
+  }
+  if (profileIdField) {
+    profileIdField.value = '';
+  }
+  if (profileSubmit) {
+    profileSubmit.textContent = 'Save Profile';
+  }
+};
+
 const openModal = (meta, points, index = null) => {
   if (!modal) {
     return;
@@ -283,6 +300,85 @@ const saveRule = () => {
   updateJson();
   renderRules();
   closeModal();
+};
+
+const normalizeCurvePayload = (payload) => {
+  if (!payload || typeof payload !== 'object') {
+    return { rules: [], settings: {} };
+  }
+  if (Array.isArray(payload.rules)) {
+    return {
+      rules: payload.rules,
+      settings: payload.settings || {},
+    };
+  }
+  const rules = [];
+  Object.keys(payload).forEach((key) => {
+    if (!key.startsWith('fan_')) {
+      return;
+    }
+    const channel = Number(key.split('_', 2)[1]);
+    if (Number.isNaN(channel)) {
+      return;
+    }
+    rules.push({
+      sensor_id: 'cpu',
+      fan_channels: [channel],
+      points: payload[key],
+    });
+  });
+  return { rules, settings: {} };
+};
+
+const populateSettings = (settings) => {
+  settingsInputs.forEach((input) => {
+    if (!input.name) {
+      return;
+    }
+    const value = settings?.[input.name];
+    if (value === null || value === undefined || Number.isNaN(value)) {
+      input.value = '';
+      return;
+    }
+    input.value = value;
+  });
+  fallbackSelects.forEach((select) => {
+    const source = select.getAttribute('data-fallback-source');
+    if (!source) {
+      return;
+    }
+    select.value = settings?.fallback_map?.[source] ?? '';
+  });
+};
+
+const loadProfileIntoForm = (profileId, name, curveJson) => {
+  if (!profileForm || !profileNameField || !profileIdField) {
+    return;
+  }
+  let parsed = null;
+  try {
+    const decoded = JSON.parse(curveJson);
+    parsed = typeof decoded === 'string' ? JSON.parse(decoded) : decoded;
+  } catch (err) {
+    parsed = null;
+  }
+  const normalized = normalizeCurvePayload(parsed);
+  rules.length = 0;
+  normalized.rules.forEach((rule) => {
+    rules.push(rule);
+  });
+  populateSettings(normalized.settings || {});
+  profileForm.setAttribute('action', '/profiles/update');
+  profileIdField.value = profileId;
+  profileNameField.value = name;
+  if (profileSubmit) {
+    profileSubmit.textContent = 'Save Changes';
+  }
+  fanCheckboxes.forEach((input) => {
+    input.checked = false;
+  });
+  setActiveRule(null);
+  updateJson();
 };
 
 const getSvgCoords = (event) => {
@@ -382,6 +478,18 @@ if (modalSave) {
   modalSave.addEventListener('click', saveRule);
 }
 
+editButtons.forEach((button) => {
+  button.addEventListener('click', () => {
+    const profileId = button.getAttribute('data-profile-id');
+    const profileName = button.getAttribute('data-profile-name') || '';
+    const curveJson = button.getAttribute('data-profile-curve') || '';
+    if (!profileId || !curveJson) {
+      return;
+    }
+    loadProfileIntoForm(profileId, profileName, curveJson);
+  });
+});
+
 settingsInputs.forEach((input) => {
   input.addEventListener('input', updateJson);
 });
@@ -392,3 +500,4 @@ fallbackSelects.forEach((select) => {
 
 renderRules();
 updateJson();
+resetEditMode();

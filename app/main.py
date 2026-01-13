@@ -168,44 +168,19 @@ def dashboard(request: Request):
 
 @app.get("/profiles", response_class=HTMLResponse)
 def profiles(request: Request):
-    rows = _load_profiles()
-    active_profile_id = get_active_profile_id()
-    default_profile_id = get_default_profile_id()
-    fans = list_fans(active_only=True)
-    sensors = list_sensors()
-    return templates.TemplateResponse(
-        "profiles.html",
-        {
-            "request": request,
-            "profiles": [dict(row) for row in rows],
-            "active_profile_id": active_profile_id,
-            "default_profile_id": default_profile_id,
-            "fans": fans,
-            "sensors": sensors,
-            "error": None,
-        },
-    )
+    return _render_profiles_page(request)
 
 
 @app.post("/profiles")
 def create_profile(
+    request: Request,
     name: str = Form(...),
     curve_json: str = Form(...),
     schedule_json: str = Form(""),
 ):
     error = _validate_profile_json(curve_json, schedule_json)
     if error:
-        rows = _load_profiles()
-        active_profile_id = get_active_profile_id()
-        return templates.TemplateResponse(
-            "profiles.html",
-            {
-                "request": request,
-                "profiles": [dict(row) for row in rows],
-                "active_profile_id": active_profile_id,
-                "error": error,
-            },
-        )
+        return _render_profiles_page(request, error=error)
     with get_connection() as conn:
         conn.execute(
             """
@@ -216,6 +191,80 @@ def create_profile(
         )
         conn.commit()
     return RedirectResponse("/profiles", status_code=303)
+
+
+@app.post("/profiles/update")
+def update_profile(
+    request: Request,
+    profile_id: int = Form(...),
+    name: str = Form(...),
+    curve_json: str = Form(...),
+    schedule_json: str = Form(""),
+):
+    error = _validate_profile_json(curve_json, schedule_json)
+    if error:
+        return _render_profiles_page(request, error=error)
+    with get_connection() as conn:
+        conn.execute(
+            """
+            UPDATE profiles
+            SET name = ?, curve_json = ?, schedule_json = ?
+            WHERE id = ?
+            """,
+            (name, curve_json, schedule_json or None, profile_id),
+        )
+        conn.commit()
+    return RedirectResponse("/profiles", status_code=303)
+
+
+def _render_profiles_page(request: Request, error: str | None = None) -> HTMLResponse:
+    rows = _load_profiles()
+    active_profile_id = get_active_profile_id()
+    default_profile_id = get_default_profile_id()
+    fans = list_fans(active_only=True)
+    sensors = list_sensors()
+    loop_seconds = _profile_loop_seconds(active_profile_id)
+    return templates.TemplateResponse(
+        "profiles.html",
+        {
+            "request": request,
+            "profiles": [dict(row) for row in rows],
+            "active_profile_id": active_profile_id,
+            "default_profile_id": default_profile_id,
+            "fans": fans,
+            "sensors": sensors,
+            "profile_loop_seconds": loop_seconds,
+            "error": error,
+        },
+    )
+
+
+def _profile_loop_seconds(profile_id: int | None) -> int:
+    if not profile_id:
+        return 5
+    with get_connection() as conn:
+        row = conn.execute(
+            """
+            SELECT curve_json
+            FROM profiles
+            WHERE id = ?
+            """,
+            (profile_id,),
+        ).fetchone()
+    if not row:
+        return 5
+    try:
+        curve = json.loads(row["curve_json"])
+    except json.JSONDecodeError:
+        return 5
+    if not isinstance(curve, dict):
+        return 5
+    settings = curve.get("settings", {}) if isinstance(curve.get("settings", {}), dict) else {}
+    try:
+        sensor_window = int(settings.get("sensor_smoothing_sec") or 0)
+    except (TypeError, ValueError):
+        sensor_window = 0
+    return max(1, sensor_window or 5)
 
 
 @app.post("/profiles/apply")
