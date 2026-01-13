@@ -646,6 +646,26 @@ body {
   gap: 12px;
 }
 
+.list__form {
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) minmax(220px, 2fr);
+  gap: 10px 12px;
+  align-items: center;
+}
+
+.list__form .form__label {
+  margin: 0;
+}
+
+.list__form .form__input,
+.list__form .font-select {
+  width: 100%;
+}
+
+.list__form .list__actions {
+  grid-column: 1 / -1;
+}
+
 .list__item {
   padding: 14px;
   border-radius: 14px;
