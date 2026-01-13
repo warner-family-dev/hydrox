@@ -17,6 +17,7 @@
 - Add OLED chain options for startup publishing and synced playback with per-OLED pixel shift.
 - Add axis tick labels on the profile curve editor grid.
 - Fix OLED startup initialization error and log startup failures to hydrox.log.
+- Shift the profile curve Y-axis title left to avoid tick overlap.
 
 ## v0.0.6 - January 11, 2026
 
