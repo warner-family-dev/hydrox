@@ -143,28 +143,30 @@
           {% if profile.schedule_json %}
           <div class="list__body">Schedule: {{ profile.schedule_json }}</div>
           {% endif %}
-          <form method="post" action="/profiles/apply">
-            <input type="hidden" name="profile_id" value="{{ profile.id }}" />
-            <button class="button button--ghost" type="submit">Apply Profile</button>
-          </form>
-          <button
-            class="button button--ghost"
-            type="button"
-            data-profile-edit
-            data-profile-id="{{ profile.id }}"
-            data-profile-name="{{ profile.name }}"
-            data-profile-curve='{{ profile.curve_json | tojson }}'
-          >
-            Edit
-          </button>
-          <form method="post" action="/profiles/default">
-            <input type="hidden" name="profile_id" value="{{ profile.id }}" />
-            <label class="profile-default">
-              <input type="radio" name="default_profile" value="{{ profile.id }}" {% if default_profile_id == profile.id %}checked{% endif %} />
-              <span>Default on boot</span>
-            </label>
-            <button class="button button--ghost" type="submit">Set Default</button>
-          </form>
+          <div class="profile-card__actions">
+            <form method="post" action="/profiles/apply">
+              <input type="hidden" name="profile_id" value="{{ profile.id }}" />
+              <button class="button button--ghost" type="submit">Apply Profile</button>
+            </form>
+            <button
+              class="button button--ghost"
+              type="button"
+              data-profile-edit
+              data-profile-id="{{ profile.id }}"
+              data-profile-name="{{ profile.name }}"
+              data-profile-curve='{{ profile.curve_json | tojson }}'
+            >
+              Edit
+            </button>
+            <form method="post" action="/profiles/default">
+              <input type="hidden" name="profile_id" value="{{ profile.id }}" />
+              <label class="profile-default">
+                <input type="radio" name="default_profile" value="{{ profile.id }}" {% if default_profile_id == profile.id %}checked{% endif %} />
+                <span>Default on boot</span>
+              </label>
+              <button class="button button--ghost" type="submit">Set Default</button>
+            </form>
+          </div>
         </div>
         {% endfor %}
       {% else %}

@@ -21,6 +21,7 @@
 - Add vcgencmd throttling status checks to Admin with warning states.
 - Align saved screen editor labels and inputs into aligned rows.
 - Allow in-place profile editing from saved profile cards and show the profile loop interval.
+- Place saved profile actions on a single row.
 
 ## v0.0.6 - January 11, 2026
 
