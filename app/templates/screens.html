@@ -175,7 +175,21 @@
           <button class="button button--ghost" type="submit">Save chain</button>
         </div>
         <label class="form__label">Brightness (%)</label>
-        <input class="form__input" type="number" name="brightness_percent" value="{{ oled_brightness.get(oled.channel, 100) }}" min="0" max="100" required />
+        <input class="form__input" type="number" name="brightness_percent" value="{{ oled_settings[oled.channel].brightness_percent }}" min="0" max="100" required />
+        <div class="chain-panel__toggles">
+          <label class="toggle toggle--inline">
+            <input type="checkbox" name="pixel_shift" {% if oled_settings[oled.channel].pixel_shift %}checked{% endif %} />
+            <span>Pixel shift</span>
+          </label>
+          <label class="toggle toggle--inline">
+            <input type="checkbox" name="publish_on_startup" {% if oled_settings[oled.channel].publish_on_startup %}checked{% endif %} />
+            <span>Publish on startup</span>
+          </label>
+          <label class="toggle toggle--inline">
+            <input type="checkbox" name="sync_playback" {% if oled_settings[oled.channel].sync_playback %}checked{% endif %} />
+            <span>Sync playback</span>
+          </label>
+        </div>
         <div class="chain-list" data-chain-list data-oled-channel="{{ oled.channel }}">
           {% if chains.get(oled.channel) %}
             {% for item in chains.get(oled.channel) %}
@@ -192,10 +206,6 @@
           {% endif %}
         </div>
         <div class="chain-panel__footer">
-          <label class="toggle toggle--inline">
-            <input type="checkbox" name="pixel_shift" checked />
-            <span>Pixel shift</span>
-          </label>
           <button class="button" type="submit" formaction="/screens/publish">Publish chain</button>
           <button class="button button--ghost" type="submit" formaction="/screens/off">Turn off</button>
         </div>

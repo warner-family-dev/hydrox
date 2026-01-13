@@ -893,6 +893,12 @@ body {
   color: var(--muted);
 }
 
+.chain-panel__toggles {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .chain-list {
   min-height: 120px;
   display: flex;

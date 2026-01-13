@@ -33,11 +33,19 @@ class PlaylistScreen:
 
 
 class OLEDJob:
-    def __init__(self, channel: int, screens: list[PlaylistScreen], brightness_percent: int, pixel_shift: bool) -> None:
+    def __init__(
+        self,
+        channel: int,
+        screens: list[PlaylistScreen],
+        brightness_percent: int,
+        pixel_shift: bool,
+        start_time: float | None,
+    ) -> None:
         self.channel = channel
         self.screens = screens
         self.brightness_percent = brightness_percent
         self.pixel_shift = pixel_shift
+        self.start_time = start_time
         self._stop_event = threading.Event()
         self._thread = threading.Thread(target=self._run, daemon=True)
 
@@ -66,6 +74,10 @@ class OLEDJob:
         shift_x = 0
         shift_y = 0
         next_shift = time.time() + 60
+        if self.start_time:
+            wait = self.start_time - time.time()
+            if wait > 0:
+                self._stop_event.wait(wait)
         while not self._stop_event.is_set():
             for screen in self.screens:
                 if self._stop_event.is_set():
@@ -99,12 +111,18 @@ class OLEDJob:
                     self._stop_event.wait(min(_REFRESH_SECONDS, remaining))
 
 
-def start_oled_job(channel: int, screens: list[PlaylistScreen], brightness_percent: int, pixel_shift: bool) -> None:
+def start_oled_job(
+    channel: int,
+    screens: list[PlaylistScreen],
+    brightness_percent: int,
+    pixel_shift: bool,
+    start_time: float | None = None,
+) -> None:
     with _lock:
         existing = _active_jobs.get(channel)
         if existing:
             existing.stop()
-        job = OLEDJob(channel, screens, brightness_percent, pixel_shift)
+        job = OLEDJob(channel, screens, brightness_percent, pixel_shift, start_time)
         _active_jobs[channel] = job
         job.start()
 

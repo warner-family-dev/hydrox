@@ -74,6 +74,9 @@ def init_db() -> None:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 oled_channel INTEGER NOT NULL UNIQUE,
                 brightness_percent INTEGER NOT NULL DEFAULT 100,
+                pixel_shift INTEGER NOT NULL DEFAULT 1,
+                publish_on_startup INTEGER NOT NULL DEFAULT 0,
+                sync_playback INTEGER NOT NULL DEFAULT 0,
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP
             )
             """
@@ -167,6 +170,9 @@ def init_db() -> None:
         _ensure_column(conn, "screens", "value_font_size", "INTEGER")
         _ensure_column(conn, "sensors", "unit", "TEXT NOT NULL DEFAULT 'C'")
         _ensure_column(conn, "sensors", "active", "INTEGER NOT NULL DEFAULT 1")
+        _ensure_column(conn, "oled_settings", "pixel_shift", "INTEGER NOT NULL DEFAULT 1")
+        _ensure_column(conn, "oled_settings", "publish_on_startup", "INTEGER NOT NULL DEFAULT 0")
+        _ensure_column(conn, "oled_settings", "sync_playback", "INTEGER NOT NULL DEFAULT 0")
         conn.commit()
 
 

@@ -98,6 +98,7 @@ def startup() -> None:
     default_profile_id = get_default_profile_id()
     set_active_profile_id(default_profile_id)
     ensure_web_fonts()
+    _start_oled_on_boot()
     branch, _ = get_git_status()
     logger = get_logger()
     logger.info("#######")
@@ -240,7 +241,8 @@ def screens(request: Request):
         ).fetchall()
         settings_rows = conn.execute(
             """
-            SELECT oled_channel, brightness_percent
+            SELECT oled_channel, brightness_percent, pixel_shift,
+                   publish_on_startup, sync_playback
             FROM oled_settings
             """
         ).fetchall()
@@ -254,7 +256,14 @@ def screens(request: Request):
             """
         ).fetchall()
     oled_channels = list_oled_channels()
-    oled_brightness = {row["oled_channel"]: row["brightness_percent"] for row in settings_rows}
+    oled_settings = {}
+    for row in settings_rows:
+        oled_settings[row["oled_channel"]] = {
+            "brightness_percent": row["brightness_percent"],
+            "pixel_shift": _read_flag(row["pixel_shift"], default=True),
+            "publish_on_startup": _read_flag(row["publish_on_startup"], default=False),
+            "sync_playback": _read_flag(row["sync_playback"], default=False),
+        }
     chains: dict[int, list[dict]] = {}
     chain_ids: dict[int, list[int]] = {oled["channel"]: [] for oled in oled_channels}
     for row in chain_rows:
@@ -266,6 +275,15 @@ def screens(request: Request):
         }
         chains.setdefault(channel, []).append(item)
         chain_ids.setdefault(channel, []).append(row["screen_id"])
+    for oled in oled_channels:
+        channel = oled["channel"]
+        if channel not in oled_settings:
+            oled_settings[channel] = {
+                "brightness_percent": 100,
+                "pixel_shift": True,
+                "publish_on_startup": False,
+                "sync_playback": False,
+            }
     return templates.TemplateResponse(
         "screens.html",
         {
@@ -276,7 +294,7 @@ def screens(request: Request):
             "tokens": list_token_definitions(),
             "chains": chains,
             "chain_ids": chain_ids,
-            "oled_brightness": oled_brightness,
+            "oled_settings": oled_settings,
         },
     )
 
@@ -353,33 +371,171 @@ def _load_oled_chain(conn, oled_channel: int) -> list[PlaylistScreen]:
     return screens
 
 
-def _save_oled_brightness(conn, oled_channel: int, brightness_percent: int) -> None:
+def _save_oled_settings(
+    conn,
+    oled_channel: int,
+    brightness_percent: int,
+    pixel_shift: bool,
+    publish_on_startup: bool,
+    sync_playback: bool,
+) -> None:
     clamped = max(0, min(100, int(brightness_percent)))
     conn.execute(
         """
-        INSERT INTO oled_settings (oled_channel, brightness_percent)
-        VALUES (?, ?)
-        ON CONFLICT(oled_channel) DO UPDATE SET brightness_percent = excluded.brightness_percent
+        INSERT INTO oled_settings (
+            oled_channel,
+            brightness_percent,
+            pixel_shift,
+            publish_on_startup,
+            sync_playback
+        )
+        VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(oled_channel) DO UPDATE SET
+            brightness_percent = excluded.brightness_percent,
+            pixel_shift = excluded.pixel_shift,
+            publish_on_startup = excluded.publish_on_startup,
+            sync_playback = excluded.sync_playback
         """,
-        (oled_channel, clamped),
+        (
+            oled_channel,
+            clamped,
+            1 if pixel_shift else 0,
+            1 if publish_on_startup else 0,
+            1 if sync_playback else 0,
+        ),
     )
 
 
-def _load_oled_brightness(conn, oled_channel: int) -> int:
+def _read_flag(value: object, default: bool) -> bool:
+    if value is None:
+        return default
+    return bool(value)
+
+
+def _load_oled_settings(conn, oled_channel: int) -> dict:
     row = conn.execute(
         """
-        SELECT brightness_percent
+        SELECT brightness_percent, pixel_shift, publish_on_startup, sync_playback
         FROM oled_settings
         WHERE oled_channel = ?
         """,
         (oled_channel,),
     ).fetchone()
     if not row:
-        return 100
+        return {
+            "brightness_percent": 100,
+            "pixel_shift": True,
+            "publish_on_startup": False,
+            "sync_playback": False,
+        }
+
+
+def _restart_synced_oled_jobs(start_time: float) -> None:
+    with get_connection() as conn:
+        rows = conn.execute(
+            """
+            SELECT oled_channel, brightness_percent, pixel_shift, sync_playback
+            FROM oled_settings
+            WHERE sync_playback = 1
+            """
+        ).fetchall()
+        synced_channels = [row["oled_channel"] for row in rows]
+        settings_map = {
+            row["oled_channel"]: {
+                "brightness_percent": row["brightness_percent"],
+                "pixel_shift": _read_flag(row["pixel_shift"], default=True),
+            }
+            for row in rows
+        }
+        chain_map: dict[int, list[PlaylistScreen]] = {}
+        for channel in synced_channels:
+            chain_map[channel] = _load_oled_chain(conn, channel)
+    for channel in synced_channels:
+        screens = chain_map.get(channel, [])
+        if not screens:
+            stop_oled_job(int(channel))
+            continue
+        settings = settings_map.get(channel) or {}
+        start_oled_job(
+            int(channel),
+            screens,
+            settings.get("brightness_percent", 100),
+            settings.get("pixel_shift", True),
+            start_time=start_time,
+        )
+
+
+def _start_oled_on_boot() -> None:
+    oled_channels = list_oled_channels()
+    if not oled_channels:
+        return
+    with get_connection() as conn:
+        settings_rows = conn.execute(
+            """
+            SELECT oled_channel, brightness_percent, pixel_shift,
+                   publish_on_startup, sync_playback
+            FROM oled_settings
+            """
+        ).fetchall()
+        settings_map = {
+            row["oled_channel"]: {
+                "brightness_percent": row["brightness_percent"],
+                "pixel_shift": _read_flag(row["pixel_shift"], default=True),
+                "publish_on_startup": _read_flag(row["publish_on_startup"], default=False),
+                "sync_playback": _read_flag(row["sync_playback"], default=False),
+            }
+            for row in settings_rows
+        }
+        chains = {}
+        for oled in oled_channels:
+            channel = oled["channel"]
+            chains[channel] = _load_oled_chain(conn, channel)
+    sync_channels = []
+    for oled in oled_channels:
+        channel = oled["channel"]
+        settings = settings_map.get(channel)
+        if not settings or not settings["publish_on_startup"]:
+            continue
+        if settings.get("sync_playback"):
+            sync_channels.append(channel)
+        else:
+            screens = chains.get(channel, [])
+            if screens:
+                start_oled_job(
+                    int(channel),
+                    screens,
+                    settings.get("brightness_percent", 100),
+                    settings.get("pixel_shift", True),
+                )
+    if sync_channels:
+        start_time = time.time() + 0.25
+        for channel in sync_channels:
+            screens = chains.get(channel, [])
+            if not screens:
+                stop_oled_job(int(channel))
+                continue
+            settings = settings_map.get(channel, {})
+            start_oled_job(
+                int(channel),
+                screens,
+                settings.get("brightness_percent", 100),
+                settings.get("pixel_shift", True),
+                start_time=start_time,
+            )
     try:
-        return max(0, min(100, int(row["brightness_percent"])))
+        return {
+            "brightness_percent": max(0, min(100, int(row["brightness_percent"]))),
+            "pixel_shift": _read_flag(row["pixel_shift"], default=True),
+            "publish_on_startup": _read_flag(row["publish_on_startup"], default=False),
+            "sync_playback": _read_flag(row["sync_playback"], default=False),
+        }
     except (TypeError, ValueError):
-        return 100
+        return {
+            "brightness_percent": 100,
+            "pixel_shift": True,
+            "publish_on_startup": False,
+            "sync_playback": False,
+        }
 
 
 @app.post("/screens")
@@ -424,7 +580,9 @@ def create_screen(
 @app.post("/screens/publish")
 def publish_oled_chain(
     oled_channel: int = Form(...),
-    pixel_shift: str = Form("on"),
+    pixel_shift: str | None = Form(None),
+    publish_on_startup: str | None = Form(None),
+    sync_playback: str | None = Form(None),
     screen_ids: str = Form(""),
     brightness_percent: int = Form(100),
 ):
@@ -432,18 +590,28 @@ def publish_oled_chain(
         normalized = _normalize_screen_ids(screen_ids)
         if screen_ids is not None:
             _save_oled_chain(conn, oled_channel, normalized)
-        _save_oled_brightness(conn, oled_channel, brightness_percent)
+        _save_oled_settings(
+            conn,
+            oled_channel,
+            brightness_percent,
+            pixel_shift == "on",
+            publish_on_startup == "on",
+            sync_playback == "on",
+        )
         conn.commit()
         screens = _load_oled_chain(conn, oled_channel)
-        brightness = _load_oled_brightness(conn, oled_channel)
+        settings = _load_oled_settings(conn, oled_channel)
+    if settings["sync_playback"]:
+        _restart_synced_oled_jobs(time.time() + 0.25)
+        return RedirectResponse("/screens", status_code=303)
     if not screens:
         stop_oled_job(int(oled_channel))
         return RedirectResponse("/screens", status_code=303)
     start_oled_job(
         int(oled_channel),
         screens,
-        brightness,
-        pixel_shift == "on",
+        settings["brightness_percent"],
+        settings["pixel_shift"],
     )
     return RedirectResponse("/screens", status_code=303)
 
@@ -453,11 +621,21 @@ def update_oled_chain(
     oled_channel: int = Form(...),
     screen_ids: str = Form(""),
     brightness_percent: int = Form(100),
+    pixel_shift: str | None = Form(None),
+    publish_on_startup: str | None = Form(None),
+    sync_playback: str | None = Form(None),
 ):
     with get_connection() as conn:
         normalized = _normalize_screen_ids(screen_ids)
         _save_oled_chain(conn, oled_channel, normalized)
-        _save_oled_brightness(conn, oled_channel, brightness_percent)
+        _save_oled_settings(
+            conn,
+            oled_channel,
+            brightness_percent,
+            pixel_shift == "on",
+            publish_on_startup == "on",
+            sync_playback == "on",
+        )
         conn.commit()
     return RedirectResponse("/screens", status_code=303)
 
