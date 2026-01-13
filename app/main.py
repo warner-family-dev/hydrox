@@ -216,6 +216,12 @@ def screens(request: Request):
             ORDER BY created_at DESC
             """
         ).fetchall()
+        settings_rows = conn.execute(
+            """
+            SELECT oled_channel, brightness_percent
+            FROM oled_settings
+            """
+        ).fetchall()
         chain_rows = conn.execute(
             """
             SELECT oc.oled_channel, oc.screen_id, oc.position,
@@ -226,6 +232,7 @@ def screens(request: Request):
             """
         ).fetchall()
     oled_channels = list_oled_channels()
+    oled_brightness = {row["oled_channel"]: row["brightness_percent"] for row in settings_rows}
     chains: dict[int, list[dict]] = {}
     chain_ids: dict[int, list[int]] = {oled["channel"]: [] for oled in oled_channels}
     for row in chain_rows:
@@ -247,6 +254,7 @@ def screens(request: Request):
             "tokens": list_token_definitions(),
             "chains": chains,
             "chain_ids": chain_ids,
+            "oled_brightness": oled_brightness,
         },
     )
 
@@ -323,6 +331,35 @@ def _load_oled_chain(conn, oled_channel: int) -> list[PlaylistScreen]:
     return screens
 
 
+def _save_oled_brightness(conn, oled_channel: int, brightness_percent: int) -> None:
+    clamped = max(0, min(100, int(brightness_percent)))
+    conn.execute(
+        """
+        INSERT INTO oled_settings (oled_channel, brightness_percent)
+        VALUES (?, ?)
+        ON CONFLICT(oled_channel) DO UPDATE SET brightness_percent = excluded.brightness_percent
+        """,
+        (oled_channel, clamped),
+    )
+
+
+def _load_oled_brightness(conn, oled_channel: int) -> int:
+    row = conn.execute(
+        """
+        SELECT brightness_percent
+        FROM oled_settings
+        WHERE oled_channel = ?
+        """,
+        (oled_channel,),
+    ).fetchone()
+    if not row:
+        return 100
+    try:
+        return max(0, min(100, int(row["brightness_percent"])))
+    except (TypeError, ValueError):
+        return 100
+
+
 @app.post("/screens")
 def create_screen(
     name: str = Form(...),
@@ -367,19 +404,23 @@ def publish_oled_chain(
     oled_channel: int = Form(...),
     pixel_shift: str = Form("on"),
     screen_ids: str = Form(""),
+    brightness_percent: int = Form(100),
 ):
     with get_connection() as conn:
         normalized = _normalize_screen_ids(screen_ids)
         if screen_ids is not None:
             _save_oled_chain(conn, oled_channel, normalized)
-            conn.commit()
+        _save_oled_brightness(conn, oled_channel, brightness_percent)
+        conn.commit()
         screens = _load_oled_chain(conn, oled_channel)
+        brightness = _load_oled_brightness(conn, oled_channel)
     if not screens:
         stop_oled_job(int(oled_channel))
         return RedirectResponse("/screens", status_code=303)
     start_oled_job(
         int(oled_channel),
         screens,
+        brightness,
         pixel_shift == "on",
     )
     return RedirectResponse("/screens", status_code=303)
@@ -389,10 +430,12 @@ def publish_oled_chain(
 def update_oled_chain(
     oled_channel: int = Form(...),
     screen_ids: str = Form(""),
+    brightness_percent: int = Form(100),
 ):
     with get_connection() as conn:
         normalized = _normalize_screen_ids(screen_ids)
         _save_oled_chain(conn, oled_channel, normalized)
+        _save_oled_brightness(conn, oled_channel, brightness_percent)
         conn.commit()
     return RedirectResponse("/screens", status_code=303)
 

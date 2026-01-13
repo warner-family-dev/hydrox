@@ -1,5 +1,12 @@
 ### Changelog
 
+## v0.0.6 - January 11, 2026
+
+- Make the header status dot green when admin status, liquidctl, and Wi-Fi are all healthy.
+- Add per-OLED brightness control for chain playback.
+- Ensure Docker Compose services restart unless stopped on boot.
+- Add `images/` folder for README assets.
+
 ## v0.0.5 - January 9, 2026
 
 - Hide pump percent when no pump channel is mapped.

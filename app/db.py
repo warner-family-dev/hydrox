@@ -70,6 +70,16 @@ def init_db() -> None:
         )
         conn.execute(
             """
+            CREATE TABLE IF NOT EXISTS oled_settings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                oled_channel INTEGER NOT NULL UNIQUE,
+                brightness_percent INTEGER NOT NULL DEFAULT 100,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+        conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS oled_chains (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 oled_channel INTEGER NOT NULL,

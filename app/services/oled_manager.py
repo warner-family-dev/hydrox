@@ -33,9 +33,10 @@ class PlaylistScreen:
 
 
 class OLEDJob:
-    def __init__(self, channel: int, screens: list[PlaylistScreen], pixel_shift: bool) -> None:
+    def __init__(self, channel: int, screens: list[PlaylistScreen], brightness_percent: int, pixel_shift: bool) -> None:
         self.channel = channel
         self.screens = screens
+        self.brightness_percent = brightness_percent
         self.pixel_shift = pixel_shift
         self._stop_event = threading.Event()
         self._thread = threading.Thread(target=self._run, daemon=True)
@@ -56,6 +57,8 @@ class OLEDJob:
             select_oled_channel(self.channel)
             serial = i2c(port=I2C_BUS, address=OLED_ADDR)
             device = ssd1306(serial, width=128, height=64)
+            brightness = int(max(0, min(100, self.brightness_percent)))
+            device.contrast(int(brightness / 100 * 255))
         except Exception:
             logger.exception("oled job failed to initialize for channel %s", self.channel)
             return
@@ -96,12 +99,12 @@ class OLEDJob:
                     self._stop_event.wait(min(_REFRESH_SECONDS, remaining))
 
 
-def start_oled_job(channel: int, screens: list[PlaylistScreen], pixel_shift: bool) -> None:
+def start_oled_job(channel: int, screens: list[PlaylistScreen], brightness_percent: int, pixel_shift: bool) -> None:
     with _lock:
         existing = _active_jobs.get(channel)
         if existing:
             existing.stop()
-        job = OLEDJob(channel, screens, pixel_shift)
+        job = OLEDJob(channel, screens, brightness_percent, pixel_shift)
         _active_jobs[channel] = job
         job.start()
 

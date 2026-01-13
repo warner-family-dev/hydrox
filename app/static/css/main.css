@@ -84,6 +84,11 @@ body {
   box-shadow: 0 0 12px rgba(224, 82, 82, 0.65);
 }
 
+.brand__dot--ok {
+  background: #22c55e;
+  box-shadow: 0 0 12px rgba(34, 197, 94, 0.65);
+}
+
 .brand__title {
   font-family: "Space Grotesk", "IBM Plex Mono", sans-serif;
   font-size: 20px;
