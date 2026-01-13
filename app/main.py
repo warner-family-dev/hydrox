@@ -59,6 +59,16 @@ _cpu_fan_missing_logged = False
 _ADMIN_PASSWORD = "admin"
 _PUMP_MIN_RPM = 800
 _PUMP_MAX_RPM = 4800
+_PUMP_PWM_CURVE = [
+    (40, 1304),
+    (50, 1820),
+    (59, 2350),
+    (60, 2400),
+    (70, 3020),
+    (80, 3720),
+    (90, 4520),
+    (100, 4790),
+]
 _calibration_lock = threading.Lock()
 _calibration_state = {
     "running": False,
@@ -715,16 +725,20 @@ def set_manual_fan_speed(
             return JSONResponse({"ok": False, "error": "Percent must be 0-100."}, status_code=400)
         if value > 0:
             if is_pump:
-                min_percent = min(100, int((_PUMP_MIN_RPM * 100 + _PUMP_MAX_RPM - 1) / _PUMP_MAX_RPM))
-                if value < min_percent:
-                    value = min_percent
+                desired_rpm = _percent_to_rpm(value, _PUMP_MAX_RPM, _PUMP_MIN_RPM)
+                percent = _pump_pwm_for_rpm(desired_rpm)
+                if percent is None:
+                    return JSONResponse({"ok": False, "error": "Pump curve unavailable."}, status_code=400)
             elif fan.get("max_rpm"):
                 max_rpm = fan["max_rpm"]
                 if max_rpm and max_rpm > 0:
                     min_percent = min(100, int((min_rpm * 100 + max_rpm - 1) / max_rpm))
                     if value < min_percent:
                         value = min_percent
-        percent = value
+        elif is_pump:
+            percent = 0
+        if not is_pump:
+            percent = value
     else:
         max_rpm = _PUMP_MAX_RPM if is_pump else fan.get("max_rpm")
         if not max_rpm:
@@ -735,6 +749,10 @@ def set_manual_fan_speed(
         if is_pump:
             if value > 0 and value < _PUMP_MIN_RPM:
                 value = _PUMP_MIN_RPM
+            if value > 0:
+                percent = _pump_pwm_for_rpm(value)
+                if percent is None:
+                    return JSONResponse({"ok": False, "error": "Pump curve unavailable."}, status_code=400)
         elif value > 0 and value < min_rpm:
             value = min_rpm
         if value > max_rpm:
@@ -744,7 +762,8 @@ def set_manual_fan_speed(
             )
         if max_rpm <= 0:
             return JSONResponse({"ok": False, "error": "Invalid max RPM."}, status_code=400)
-        percent = max(0, min(100, round(value / max_rpm * 100)))
+        if not is_pump:
+            percent = max(0, min(100, round(value / max_rpm * 100)))
 
     if not _set_fan_speed(channel_index, int(percent)):
         logger.error(
@@ -943,6 +962,34 @@ def _set_fan_speed(channel_index: int, percent: int) -> bool:
         return False
     set_fan_pwm(channel_index, percent)
     return True
+
+
+def _percent_to_rpm(percent: int, max_rpm: int, min_rpm: int) -> int:
+    if percent <= 0:
+        return 0
+    rpm = int(round(max_rpm * percent / 100))
+    return max(min_rpm, rpm)
+
+
+def _pump_pwm_for_rpm(target_rpm: int) -> int | None:
+    if target_rpm <= 0:
+        return 0
+    points = sorted(_PUMP_PWM_CURVE, key=lambda item: item[1])
+    if not points:
+        return None
+    if target_rpm <= points[0][1]:
+        return points[0][0]
+    if target_rpm >= points[-1][1]:
+        return points[-1][0]
+    for (pwm_low, rpm_low), (pwm_high, rpm_high) in zip(points, points[1:]):
+        if rpm_low <= target_rpm <= rpm_high:
+            span = rpm_high - rpm_low
+            if span <= 0:
+                return pwm_low
+            ratio = (target_rpm - rpm_low) / span
+            pwm = pwm_low + ratio * (pwm_high - pwm_low)
+            return int(round(max(0, min(100, pwm))))
+    return None
 
 
 def _cpu_fan_series(limit: int, max_rpm: int) -> list[float]:

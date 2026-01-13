@@ -1,5 +1,9 @@
 ### Changelog
 
+## v0.0.7 - January 13, 2026
+
+- Map pump RPM targets to PWM using a measured curve for accurate percent control.
+
 ## v0.0.6 - January 11, 2026
 
 - Make the header status dot green when admin status, liquidctl, and Wi-Fi are all healthy.
