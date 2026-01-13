@@ -3,6 +3,7 @@
 ## v0.0.7 - January 13, 2026
 
 - Map pump RPM targets to PWM using a measured curve for accurate percent control.
+- Show the pump max RPM (4800) as a disabled field in Settings.
 
 ## v0.0.6 - January 11, 2026
 

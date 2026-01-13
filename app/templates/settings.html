@@ -66,6 +66,9 @@
       </div>
       <input class="form__input" type="text" name="name" value="{{ fan.name }}" required />
       <input class="form__input" type="number" name="max_rpm" value="{{ fan.max_rpm or '' }}" min="0" placeholder="Max RPM" {% if pump_channel == fan.channel_index %}disabled{% endif %} />
+      {% if pump_channel == fan.channel_index %}
+      <input class="form__input" type="number" value="4800" placeholder="Pump Max RPM" disabled />
+      {% endif %}
       <button class="button button--ghost" type="submit">Update</button>
     </form>
     {% endfor %}
