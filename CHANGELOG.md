@@ -4,6 +4,7 @@
 
 - Make the header status dot green when admin status, liquidctl, and Wi-Fi are all healthy.
 - Add per-OLED brightness control for chain playback.
+- Ensure Docker Compose services restart unless stopped on boot.
 
 ## v0.0.5 - January 9, 2026
 

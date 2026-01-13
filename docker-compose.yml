@@ -33,6 +33,7 @@ services:
       - TZ=America/Chicago
       - PUID=1000
       - PGID=1003
+    restart: unless-stopped
 
   wifi-exporter:
     build: ./wifi_exporter
@@ -42,6 +43,7 @@ services:
       - NET_ADMIN
     environment:
       - WIFI_INTERFACE=wlan0
+    restart: unless-stopped
 
 volumes:
   hydrox_data:
